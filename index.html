@@ -94,7 +94,8 @@ h2{font-size:1.05rem;margin:0 0 10px;font-weight:650}
 /* Navigation date */
 .daynav{display:flex;align-items:center;gap:10px}
 .datepick{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:44px;text-align:center}
-.datepick strong{font-size:1.05rem;text-transform:capitalize}
+.datepick strong{font-size:1rem;line-height:1.25}
+.datepick strong::first-letter{text-transform:uppercase}
 .datepick input{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer}
 
 /* Bilan du jour */
@@ -137,7 +138,7 @@ h2{font-size:1.05rem;margin:0 0 10px;font-weight:650}
 .org-line:first-of-type{border-top:0}
 .trio{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;font-size:.82rem}
 .trio div{background:var(--surface2);border-radius:10px;padding:8px}
-.trio b{display:block;font-size:1rem}
+.trio b{display:block;font-size:.95rem;white-space:nowrap}
 .e-dur{font-weight:700;white-space:nowrap}
 .e-date{font-size:.8rem;color:var(--muted);margin-bottom:2px}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--c,var(--muted)) 16%,transparent);color:var(--ink);font-weight:550}
@@ -151,25 +152,29 @@ mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;bor
 .warnbox{font-size:.85rem;color:var(--warn);font-weight:600}
 
 /* Semaine */
-.wrow{display:grid;grid-template-columns:58px 1fr 64px;gap:10px;align-items:center;padding:8px 0;cursor:pointer;border-radius:8px}
+.wrow{display:grid;grid-template-columns:52px 1fr auto;gap:8px;align-items:center;padding:8px 0;cursor:pointer;border-radius:8px}
 .wrow.today .wl{color:var(--accent);font-weight:700}
 .wrow.off .wl{color:var(--muted)}
-.wl{font-size:.9rem;text-transform:capitalize}
+.wl{font-size:.82rem;white-space:nowrap}
+.wl::first-letter{text-transform:uppercase}
 .wbar{position:relative;height:22px;background:var(--surface2);border-radius:6px;overflow:hidden;display:flex}
 .wbar span{height:100%;background:var(--c)}
 .wbar .target{position:absolute;top:0;bottom:0;border-left:2px dashed var(--ink);opacity:.45}
-.wt{text-align:right;font-weight:600;font-size:.9rem}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.kpi{background:var(--surface2);border-radius:12px;padding:10px}
-.kpi b{display:block;font-size:1.2rem}
-.kpi span{font-size:.78rem;color:var(--muted)}
+.wt{text-align:right;font-weight:600;font-size:.82rem;white-space:nowrap;min-width:3.4em}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.kpi{background:var(--surface2);border-radius:12px;padding:8px 9px;min-width:0}
+.kpi b{display:block;font-size:1.05rem;white-space:nowrap;line-height:1.3}
+.kpi span{display:block;font-size:.72rem;line-height:1.25;color:var(--muted)}
 .brk{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:6px 0}
 .brk .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--surface2);overflow:hidden}
 .brk .bar span{display:block;height:100%;background:var(--c)}
 
 /* Recherche */
 .field{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted)}
-.field input,.field select,.field textarea{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;font-size:1rem;width:100%}
+.field input,.field select,.field textarea{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;font-size:1rem;width:100%;min-width:0;max-width:100%}
+/* iPhone : les champs date et heure ont une largeur minimale propre qui déborde du cadre */
+input[type=time],input[type=date],input[type=datetime-local]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webkit-date-and-time-value{text-align:left;margin:0}
 .field textarea{min-height:84px;resize:vertical}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -193,6 +198,37 @@ mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;bor
 .swatches button{aspect-ratio:1;border-radius:10px;border:2px solid transparent;background:var(--c);min-height:40px}
 .swatches button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--surface)}
 #confirm{z-index:40} #itemdlg{z-index:30} #importdlg{z-index:30}
+.absrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:14px;padding:12px 14px;cursor:pointer;width:100%;text-align:left}
+.absrow b{display:block}
+.tbl{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
+.tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:.78rem;padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
+.tbl td{padding:8px 6px 8px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td.r,.tbl th.r{white-space:nowrap;font-size:.78rem;padding-left:4px}
+.tbl td.r b{font-size:.8rem}
+.tbl.em{table-layout:fixed}
+.tbl.em td.r,.tbl.em th.r{padding-left:6px}
+.tbl.em tr.nm td{border-bottom:0;padding:10px 0 2px}
+.tbl.em tr.vals td{padding-top:2px}
+.tbl.em tr.tot td{font-size:.85rem}
+.tbl.em tr.vals.tot td.r{font-size:.8rem}
+.tbl.em .chip{font-size:.78rem;padding:2px 8px;gap:5px}
+.tbl.em .det{display:inline;margin-left:4px;font-size:.72rem;line-height:1.3}
+.brk b{white-space:nowrap;font-size:.85rem}
+/* Petits écrans : tout un peu plus compact */
+@media (max-width:400px){
+  html{font-size:15px}
+  main{padding:12px 10px 140px}
+  .card{padding:12px;border-radius:14px}
+  .stack>*+*{margin-top:12px}
+}
+.tbl td.r,.tbl th.r{text-align:right}
+.tbl tr.tot td{font-weight:700;border-bottom:0}
+.tblwrap{overflow-x:auto}
+.seg{display:flex;gap:6px;flex-wrap:nowrap}
+.seg .pick{flex:1;justify-content:center;padding:6px 4px;font-size:.82rem;min-height:36px}
+.note{font-size:.8rem;color:var(--muted);margin:8px 0 0}
+.chip.flag{--c:var(--accent)}
+#absdlg{z-index:30}
 .imp-sum{background:var(--surface2);border-radius:12px;padding:12px;font-size:.92rem}
 .imp-sum b{font-size:1.05rem}
 .imp-err{max-height:180px;overflow:auto;font-size:.82rem;color:var(--muted);margin:6px 0 0;padding-left:18px}
@@ -206,16 +242,18 @@ mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;bor
 nav.tabs{
   position:fixed;left:0;right:0;bottom:0;z-index:6;
   background:var(--surface);border-top:1px solid var(--line);
-  display:grid;grid-template-columns:repeat(4,1fr);
+  display:grid;grid-template-columns:repeat(5,1fr);
   padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));
 }
 nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;text-decoration:none;color:var(--muted);font-size:.75rem;font-weight:600;padding:6px 0;border-radius:10px;min-height:48px;justify-content:center}
-nav.tabs a .ic{font-size:1.2rem;line-height:1}
+nav.tabs a .ic{display:block;width:24px;height:24px;line-height:0}
+nav.tabs a .ic svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft)}
 .fab{
   position:fixed;right:18px;bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:7;
-  background:var(--accent);color:var(--accent-ink);border:0;border-radius:18px;padding:14px 20px;
-  font-weight:700;font-size:1rem;box-shadow:0 8px 24px color-mix(in srgb,var(--accent) 40%,transparent);min-height:52px
+  background:#F59E0B;color:#1B1405;border:0;border-radius:50%;padding:0;width:60px;height:60px;
+  display:grid;place-items:center;font-weight:500;font-size:2.2rem;line-height:1;
+  box-shadow:0 8px 22px rgba(245,158,11,.45)
 }
 @media (min-width:760px){.fab{right:calc(50% - 360px + 18px)}}
 
@@ -260,13 +298,14 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
 
 <main id="main"></main>
 
-<button class="fab" data-act="new" id="fab">+ Ajouter</button>
+<button class="fab" data-act="new" id="fab" aria-label="Ajouter une tâche">+</button>
 
 <nav class="tabs" aria-label="Sections">
-  <a href="#jour" data-tab="jour"><span class="ic">📅</span>Journée</a>
-  <a href="#semaine" data-tab="semaine"><span class="ic">📊</span>Semaine</a>
-  <a href="#recherche" data-tab="recherche"><span class="ic">🔍</span>Recherche</a>
-  <a href="#reglages" data-tab="reglages"><span class="ic">⚙️</span>Réglages</a>
+  <a href="#jour" data-tab="jour"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/><rect x="10" y="13" width="4" height="4" rx="1" fill="currentColor" stroke="none"/></svg></span>Journée</a>
+  <a href="#semaine" data-tab="semaine"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6h9M5 10h14M5 14h11M5 18h6"/></svg></span>Semaine</a>
+  <a href="#recherche" data-tab="recherche"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></svg></span>Recherche</a>
+  <a href="#bilan" data-tab="bilan"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19h16M7 16v-4M12 16V7M17 16v-7"/></svg></span>Bilan</a>
+  <a href="#reglages" data-tab="reglages"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span>Réglages</a>
 </nav>
 
 <div class="sheet" id="sheet" aria-hidden="true">
@@ -359,6 +398,28 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
     </div>
   </div>
 </div>
+<div class="sheet" id="absdlg" aria-hidden="true">
+  <div class="backdrop" data-act="absClose"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="ab-title">
+    <div class="grab"></div>
+    <h2 id="ab-title">Congé ou absence</h2>
+    <div class="stack">
+      <div class="field">Type<div class="chips" id="ab-types"></div></div>
+      <div class="grid2" id="ab-dates">
+        <label class="field">Du<input type="date" id="ab-from"></label>
+        <label class="field" id="ab-to-wrap">Au<input type="date" id="ab-to"></label>
+      </div>
+      <div class="field">Durée par jour<div class="chips" id="ab-spans"></div></div>
+      <label class="field">Remarque<input type="text" id="ab-remark" placeholder="Facultatif" autocomplete="off"></label>
+      <div id="ab-info" class="small muted"></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" data-act="absSave">Enregistrer</button>
+      <button class="btn ghost" data-act="absClose">Annuler</button>
+    </div>
+    <div class="actions" id="ab-extra"><button class="btn danger" data-act="absDelete">Supprimer</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="importfile" accept="application/json,.json" class="sr" tabindex="-1">
 <input type="file" id="csvfile" accept=".csv,text/csv,text/plain,.txt" class="sr" tabindex="-1">
@@ -391,6 +452,7 @@ const nowHM = () => { const d = new Date(); return pad(d.getHours())+':'+pad(d.g
 const minToHM = m => pad(Math.floor(m/60)%24)+':'+pad(m%60);
 const dur = e => { const s = tmin(e.start), en = tmin(e.end); if(s==null||en==null) return 0; let d = en-s; if(d<=0) d += 1440; return Math.max(0, d-(+e.pause||0)); };
 const fmt = m => { m = Math.round(m); const sg = m<0?'−':''; m = Math.abs(m); return sg+Math.floor(m/60)+' h '+pad(m%60); };
+const fmtC = m => { m = Math.round(m); return Math.floor(m/60)+'h'+pad(m%60); }; // format court pour les tableaux
 const fmtSigned = m => (m>0?'+':'')+fmt(m);
 const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
@@ -406,7 +468,7 @@ const STATUSES = [
   {id:'bloque', label:'Bloqué', cls:'st-bloque'}
 ];
 const DEFAULT_SETTINGS = {
-  targetMin: 456, // 7 h 36 = 38 h / 5 jours
+  extraHolidays: '', // fériés supplémentaires JJ/MM
   workdays: [1,2,3,4,5],
   theme: 'auto',
   cats: [
@@ -436,7 +498,7 @@ function migrateEntry(e){
 }
 
 /* ---------- État ---------- */
-const S = { entries:new Map(), settings:clone(DEFAULT_SETTINGS), mode:'loading', col:null };
+const S = { absences:new Map(), entries:new Map(), settings:clone(DEFAULT_SETTINGS), mode:'loading', col:null };
 let view = 'jour';
 let curDate = todayISO();
 let weekStart = mondayOf(todayISO());
@@ -448,6 +510,62 @@ const catOf = id => S.settings.cats.find(c => c.id===id) || {id:'', name:'Sans c
 const showOf = id => (S.settings.shows||[]).find(c => c.id===id) || null;
 const statusOf = id => STATUSES.find(s => s.id===id) || STATUSES[0];
 const isWorkday = s => S.settings.workdays.includes(isoWeekday(s));
+// Jours fériés belges du règlement : 01/01, lundi de Pâques, 01/05, Ascension, lundi de Pentecôte, 21/07, 15/08, 27/09, 01/11, 11/11, 25/12
+const holCache = new Map();
+function easter(y){ const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1; return toISO(new Date(y,mo-1,da)); }
+function holidays(y){
+  const extra = S.settings.extraHolidays || '', k = y+'|'+extra;
+  if(holCache.has(k)) return holCache.get(k);
+  const m = new Map(), e = easter(y), add = (d, n) => m.set(d, n);
+  add(y+'-01-01','Nouvel An'); add(addDays(e,1),'Lundi de Pâques'); add(y+'-05-01','Fête du travail'); add(addDays(e,39),'Ascension');
+  add(addDays(e,50),'Lundi de Pentecôte'); add(y+'-07-21','Fête nationale'); add(y+'-08-15','Assomption'); add(y+'-09-27','Fête de la Fédération Wallonie-Bruxelles');
+  add(y+'-11-01','Toussaint'); add(y+'-11-11','Armistice'); add(y+'-12-25','Noël');
+  extra.split(/[,;\s]+/).forEach(t => { const r = t.match(/^(\d{1,2})\/(\d{1,2})$/); if(r) add(y+'-'+pad(+r[2])+'-'+pad(+r[1]), 'Férié supplémentaire'); });
+  holCache.set(k, m); return m;
+}
+const holidayName = d => holidays(+d.slice(0,4)).get(d) || null;
+const isHoliday = d => !!holidayName(d);
+const ABS_TYPES = [
+  {id:'conge', label:'Congé annuel', color:'#16A34A'},
+  {id:'recup', label:'Récupération', color:'#2F5BEA'},
+  {id:'maladie', label:'Maladie', color:'#DC2626'},
+  {id:'autre', label:'Autre absence', color:'#64748B'}
+];
+const absType = id => ABS_TYPES.find(x => x.id===id) || ABS_TYPES[3];
+const allAbs = () => [...(S.absences||new Map()).values()];
+const absOn = d => allAbs().filter(a => a.date===d);
+const absDays = a => a.span==='demi' ? .5 : 1;
+const absLabel = a => a.span==='demi' ? 'demi-journée' : 'journée';
+// Un férié ne compte que s’il tombe un jour de semaine habituellement travaillé
+const isWeekHoliday = d => isHoliday(d) && isWorkday(d);
+// Valeur « jour de travail » : 1 pour un jour de semaine, moins les congés ; 0 le week-end et les fériés.
+// Peu importe le nombre d’heures prestées : en semaine, tu n’es pas libre.
+const workValue = d => (isWorkday(d) && !isHoliday(d)) ? Math.max(0, 1 - absOn(d).reduce((t,a) => t + absDays(a), 0)) : 0;
+function dayStatus(d){
+  if(isWeekHoliday(d)) return {k:'fer', label:'Jour férié : '+holidayName(d)};
+  if(!isWorkday(d)) return {k:'we', label: isoWeekday(d)===6 ? 'Samedi' : isoWeekday(d)===7 ? 'Dimanche' : 'Jour non travaillé'};
+  const a = absOn(d); if(!a.length) return {k:'trav', label:'Jour de travail'};
+  const v = workValue(d), t = absType(a[0].type).label;
+  return v<=0 ? {k:'abs', label:t} : {k:'demi', label:'Demi-jour de travail · '+t+' (demi-journée)'};
+}
+// Bilan des jours sur une période (jusqu’à une date de fin incluse)
+function dayCounts(from, end){
+  const c = {work:0, workDaysNoHours:0, workMin:0, offWorked:0, offMin:0, sam:{t:0,w:0}, dim:{t:0,w:0}, fer:{t:0,w:0}, absBy:{}};
+  if(end < from) return c;
+  for(let d = from; d <= end; d = addDays(d,1)){
+    const l = entriesOn(d), m = presence(l), v = workValue(d);
+    c.work += v;
+    if(v>0){ c.workMin += m; if(!l.length) c.workDaysNoHours++; }
+    else if(l.length){ c.offWorked++; c.offMin += m; }
+    if(isWeekHoliday(d)){ c.fer.t++; if(l.length) c.fer.w++; }
+    else if(isoWeekday(d)===6){ c.sam.t++; if(l.length) c.sam.w++; }
+    else if(isoWeekday(d)===7){ c.dim.t++; if(l.length) c.dim.w++; }
+    absOn(d).forEach(a => { (c.absBy[a.type] = c.absBy[a.type] || 0); c.absBy[a.type] += (isWorkday(d) && !isHoliday(d)) ? absDays(a) : 0; });
+  }
+  return c;
+}
+const dnum = n => (Math.round(n*10)/10).toLocaleString('fr-BE');
+
 const allEntries = () => [...S.entries.values()];
 const byStart = (a,b) => (a.date+a.start).localeCompare(b.date+b.start);
 const entriesOn = d => allEntries().filter(e => e.date===d).sort(byStart);
@@ -506,7 +624,7 @@ function setSync(kind){
 function loadLocal(){
   try{
     const raw = localStorage.getItem(LS);
-    if(raw){ const o = JSON.parse(raw); S.settings = {...clone(DEFAULT_SETTINGS), ...(o.settings||{})}; (o.entries||[]).forEach(e => S.entries.set(e.id,e)); }
+    if(raw){ const o = JSON.parse(raw); S.settings = {...clone(DEFAULT_SETTINGS), ...(o.settings||{})}; (o.entries||[]).forEach(e => S.entries.set(e.id,e)); (o.absences||[]).forEach(a => S.absences.set(a.id,a)); }
     S.mode = 'local'; setSync('local');
     if(!Array.isArray(S.settings.shows)) S.settings.shows = clone(DEFAULT_SETTINGS.shows);
     let changed = migrateSettings(S.settings);
@@ -517,12 +635,22 @@ function loadLocal(){
 }
 function saveLocal(){
   if(S.mode!=='local') return;
-  try{ localStorage.setItem(LS, JSON.stringify({settings:S.settings, entries:allEntries()})); }
+  try{ localStorage.setItem(LS, JSON.stringify({settings:S.settings, entries:allEntries(), absences:allAbs()})); }
   catch(e){ toast('Stockage local plein ou indisponible.'); }
 }
 function putEntry(e){
   S.entries.set(e.id, e); render(); refreshLists();
   if(S.mode==='db'){ const {id, ...body} = e; return enqueue(id, () => S.col.doc(id).set(body)); }
+  saveLocal(); return Promise.resolve();
+}
+function putAbs(a){
+  S.absences.set(a.id, a); render();
+  if(S.mode==='db'){ const {id, ...body} = a; return enqueue(id, () => S.col.doc(id).set({...body, kind:'absence'})); }
+  saveLocal(); return Promise.resolve();
+}
+function removeAbs(id){
+  S.absences.delete(id); render();
+  if(S.mode==='db') return enqueue(id, () => S.col.doc(id).delete());
   saveLocal(); return Promise.resolve();
 }
 function removeEntry(id){
@@ -551,8 +679,9 @@ async function boot(){
       S.col.onSnapshot(snap => {
         if(!snap.metadata.fromCache){ clearTimeout(slow); setSync('db'); }
         const m = new Map(); let st = null;
-        snap.docs.forEach(d => { const v = d.data(); if(!v) return; if(d.id==='settings') st = v; else if(v.date) m.set(d.id, {...clone(v), id:d.id}); });
-        S.entries = m;
+        const ab = new Map();
+        snap.docs.forEach(d => { const v = d.data(); if(!v) return; if(d.id==='settings') st = v; else if(v.kind==='absence') ab.set(d.id, {...clone(v), id:d.id}); else if(v.date) m.set(d.id, {...clone(v), id:d.id}); });
+        S.entries = m; S.absences = ab;
         S.settings = {...clone(DEFAULT_SETTINGS), ...(st?clone(st):{})};
         if(!Array.isArray(S.settings.shows)) S.settings.shows = clone(DEFAULT_SETTINGS.shows);
         if(st && migrateSettings(S.settings)) enqueue('settings', () => S.col.doc('settings').set(clone(S.settings)));
@@ -573,14 +702,14 @@ function applyTheme(){
 }
 
 /* ---------- Rendu ---------- */
-function readHash(){ const h = location.hash.slice(1); view = ['jour','semaine','recherche','reglages'].includes(h) ? h : 'jour'; }
+function readHash(){ const h = location.hash.slice(1); view = ['jour','semaine','recherche','bilan','reglages'].includes(h) ? h : 'jour'; }
 function render(){
   const ae = document.activeElement, aid = ae && ae.id && $('#main').contains(ae) ? ae.id : null;
   let sel = null; try{ sel = [ae.selectionStart, ae.selectionEnd]; }catch(e){}
   simCache = new Map();
-  $('#main').innerHTML = ({jour:viewJour, semaine:viewSemaine, recherche:viewRecherche, reglages:viewReglages})[view]();
+  $('#main').innerHTML = ({jour:viewJour, semaine:viewSemaine, recherche:viewRecherche, bilan:viewBilan, reglages:viewReglages})[view]();
   document.querySelectorAll('nav.tabs a').forEach(a => { if(a.dataset.tab===view) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
-  $('#fab').style.display = view==='reglages' ? 'none' : '';
+  $('#fab').style.display = (view==='reglages' || view==='bilan') ? 'none' : '';
   if(aid){ const el = document.getElementById(aid); if(el){ el.focus({preventScroll:true}); try{ if(sel && sel[0]!=null) el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
   tickTimer();
 }
@@ -630,12 +759,9 @@ function ribbon(list, date){
 function viewJour(){
   const list = entriesOn(curDate), total = presence(list), charge = sumMin(list), sim = simultMin(list);
   const hors = list.filter(e => e.source==='direct'), urg = list.filter(isUrgent);
-  const work = isWorkday(curDate), target = work ? S.settings.targetMin : 0;
-  const pct = target ? Math.min(100, total/target*100) : (total?100:0);
-  let bal;
-  if(!work) bal = `<div class="balance muted">Jour non travaillé${total ? ' : tout compte en heures supplémentaires' : ''}</div>`;
-  else if(total >= target) bal = `<div class="balance pos">Objectif atteint ${total>target ? '(' + fmtSigned(total-target) + ')' : ''}</div>`;
-  else bal = `<div class="balance neg">Encore ${fmt(target-total)} pour atteindre l’objectif</div>`;
+  const absL = absOn(curDate), st = dayStatus(curDate);
+  const stColor = {trav:'var(--accent)', demi:'var(--accent)', fer:'var(--warn)', abs:'var(--ok)', we:'var(--muted)'}[st.k];
+  const bal = `<div class="balance" style="color:${stColor}">${esc(st.label)}${(st.k==='we'||st.k==='fer'||st.k==='abs') && total ? ' · travaillé' : ''}</div>`;
   const t = S.settings.timer;
   const timerHtml = t
     ? `<section class="card timer running"><div class="grow"><div class="small muted"><span class="pulse"></span>Chrono démarré à ${esc(t.start)} le ${esc(dayMed(t.date))}</div><div class="clock num" id="timer-el">0:00:00</div></div>
@@ -649,17 +775,18 @@ function viewJour(){
     </section>
     ${curDate!==todayISO() ? `<div style="text-align:center"><button class="link" data-act="today">Revenir à aujourd’hui</button></div>` : ''}
     <section class="card hero">
-      <div class="total"><span class="big num">${fmt(total)}</span><span class="muted">de présence ${work ? 'sur '+fmt(target)+' prévues' : ''}</span></div>
-      <div class="progress ${total>=target&&target?'over':''}"><span style="width:${pct}%"></span></div>
+      <div class="total"><span class="big num">${fmt(total)}</span><span class="muted">travaillées</span></div>
       ${bal}
       ${list.length ? ribbon(list, curDate) : ''}
       ${list.length ? `<div class="trio">
-        <div><b class="num">${fmt(charge)}</b>charge (somme des tâches)</div>
-        <div><b class="num" style="color:${sim?'var(--accent)':'inherit'}">${fmt(sim)}</b>en simultané</div>
+        <div><b class="num">${fmtC(charge)}</b>charge (somme des tâches)</div>
+        <div><b class="num" style="color:${sim?'var(--accent)':'inherit'}">${fmtC(sim)}</b>en simultané</div>
         <div><b class="num" style="color:${hors.length?'var(--warn)':'inherit'}">${hors.length}</b>hors planning${urg.length ? `, dont ${urg.filter(e => e.source==='direct').length} urgente${urg.filter(e => e.source==='direct').length>1?'s':''}` : ''}</div>
       </div>` : ''}
     </section>
+    ${absL.map(a => `<button class="absrow" style="--c:${absType(a.type).color}" data-act="absEdit" data-id="${esc(a.id)}"><span style="font-size:1.4rem">🌴</span><span><b>${esc(absType(a.type).label)}</b><span class="small muted">${esc(absLabel(a))}${a.remark ? ' · '+esc(a.remark) : ''}</span></span><span class="go small muted" style="margin-left:auto">Modifier ›</span></button>`).join('')}
     ${timerHtml}
+    <button class="btn ghost block" data-act="absNew">Encoder un congé ou une absence</button>
     ${list.length ? list.map(e => entryCard(e)).join('') :
       `<div class="card empty">Rien d’encodé pour ce jour.<br><button class="btn primary" style="margin-top:12px" data-act="new">Encoder une tâche</button>${entriesOn(addDays(curDate,-1)).length ? `<br><button class="link" data-act="copyPrev">Reprendre les tâches de la veille</button>` : ''}</div>`}
   </div>`;
@@ -667,16 +794,16 @@ function viewJour(){
 
 function viewSemaine(){
   const days = [...Array(7)].map((_,i) => addDays(weekStart, i));
-  const data = days.map(d => { const l = entriesOn(d); return {d, l, t:presence(l), c:sumMin(l), work:isWorkday(d)}; });
+  const data = days.map(d => { const l = entriesOn(d); return {d, l, t:presence(l), c:sumMin(l), work:workValue(d)>0}; });
   const total = data.reduce((a,x) => a+x.t, 0);
-  const target = data.filter(x => x.work).length * S.settings.targetMin;
-  const maxDay = Math.max(S.settings.targetMin, ...data.map(x => x.c), 1);
+  const wc = dayCounts(weekStart, addDays(weekStart,6) < todayISO() ? addDays(weekStart,6) : todayISO());
+  const maxDay = Math.max(60, ...data.map(x => x.c));
   const rows = data.map(x => {
     const byCat = {}; x.l.forEach(e => { byCat[e.cat] = (byCat[e.cat]||0) + dur(e); });
     const segs = Object.entries(byCat).map(([c,m]) => `<span style="--c:${esc(catOf(c).color)};width:${(m/maxDay*100).toFixed(2)}%" title="${esc(catOf(c).name)} : ${fmt(m)}"></span>`).join('');
-    const tgt = x.work ? `<div class="target" style="left:${(S.settings.targetMin/maxDay*100).toFixed(2)}%"></div>` : '';
+    const tgt = '';
     return `<div class="wrow ${x.d===todayISO()?'today':''} ${x.work?'':'off'}" data-act="gotoDay" data-date="${x.d}" role="button" tabindex="0">
-      <div class="wl">${esc(dayShort(x.d))}</div><div class="wbar">${segs}${tgt}</div><div class="wt num">${x.t ? fmt(x.t) : '–'}${x.c>x.t ? `<div class="small" style="color:var(--accent);font-weight:600">⇄ ${fmt(x.c-x.t)}</div>` : ''}</div></div>`;
+      <div class="wl">${esc(dayShort(x.d))}${isWeekHoliday(x.d) ? ' ★' : ''}${absOn(x.d).length ? ' 🌴' : ''}</div><div class="wbar">${segs}${tgt}</div><div class="wt num">${x.t ? fmtC(x.t) : '–'}${x.c>x.t ? `<div class="small" style="color:var(--accent);font-weight:600">⇄ ${fmtC(x.c-x.t)}</div>` : ''}</div></div>`;
   }).join('');
   const all = data.flatMap(x => x.l);
   const charge = sumMin(all), sim = simultMin(all);
@@ -684,16 +811,14 @@ function viewSemaine(){
     const agg = {}; all.forEach(e => { const k = keyFn(e); agg[k] = (agg[k]||0) + dur(e); });
     const arr = Object.entries(agg).sort((a,b) => b[1]-a[1]);
     if(!arr.length) return '<p class="muted small">Aucune donnée cette semaine.</p>';
-    return arr.map(([k,m]) => `<div class="brk" style="--c:${esc(colorFn(k))}"><span>${esc(labelFn(k))}</span><b class="num">${fmt(m)} <span class="muted small">${Math.round(m/charge*100)} %</span></b><div class="bar"><span style="width:${(m/charge*100).toFixed(1)}%"></span></div></div>`).join('');
+    return arr.map(([k,m]) => `<div class="brk" style="--c:${esc(colorFn(k))}"><span>${esc(labelFn(k))}</span><b class="num">${fmtC(m)} <span class="muted small">${Math.round(m/charge*100)} %</span></b><div class="bar"><span style="width:${(m/charge*100).toFixed(1)}%"></span></div></div>`).join('');
   };
   // Mois
   const ref = parseISO(addDays(weekStart, 3)); const y = ref.getFullYear(), mo = ref.getMonth();
   const mStart = toISO(new Date(y,mo,1)), mEnd = toISO(new Date(y,mo+1,0));
   const mEntries = allEntries().filter(e => e.date>=mStart && e.date<=mEnd);
-  const mTotal = presence(mEntries);
-  let mTarget = 0, mTargetToDate = 0; const td = todayISO();
-  for(let d = mStart; d <= mEnd; d = addDays(d,1)){ if(isWorkday(d)){ mTarget += S.settings.targetMin; if(d<=td) mTargetToDate += S.settings.targetMin; } }
-  const mToDate = presence(mEntries.filter(e => e.date<=td));
+  const mTotal = presence(mEntries), td = todayISO();
+  const mc = dayCounts(mStart, mEnd < td ? mEnd : td);
   const mHors = sumMin(mEntries.filter(e => e.source==='direct')), mCharge = sumMin(mEntries);
   const monthName = ref.toLocaleDateString('fr',{month:'long',year:'numeric'});
   const end = addDays(weekStart, 6);
@@ -707,12 +832,12 @@ function viewSemaine(){
     </section>
     <section class="card">
       <div class="kpis">
-        <div class="kpi"><b class="num">${fmt(total)}</b><span>travaillées</span></div>
-        <div class="kpi"><b class="num">${fmt(target)}</b><span>prévues</span></div>
-        <div class="kpi"><b class="num" style="color:${total-target>=0?'var(--ok)':'var(--warn)'}">${fmtSigned(total-target)}</b><span>solde</span></div>
+        <div class="kpi"><b class="num">${fmtC(total)}</b><span>travaillées</span></div>
+        <div class="kpi"><b class="num">${dnum(wc.work)}</b><span>jour${wc.work>1?'s':''} de travail</span></div>
+        <div class="kpi"><b class="num">${wc.work ? fmtC(wc.workMin/wc.work) : '–'}</b><span>moyenne par jour</span></div>
       </div>
       <div style="margin-top:12px">${rows}</div>
-      <p class="small muted" style="margin:6px 0 0">Heures de présence : les tâches simultanées ne comptent qu’une fois. Les barres montrent la charge réelle, le chiffre ⇄ le temps passé en simultané. Le trait pointillé marque l’objectif quotidien.</p>
+      <p class="small muted" style="margin:6px 0 0">Heures de présence : les tâches simultanées ne comptent qu’une fois. Les barres montrent la charge réelle, le chiffre ⇄ le temps passé en simultané. ★ jour férié, 🌴 congé. Un jour de semaine compte comme jour de travail même sans heure encodée.</p>
     </section>
     ${orgSection(all, charge, sim, 'cette semaine')}
     <section class="card"><h2>Par métier</h2>${breakdown(e => e.cat, k => catOf(k).name, k => catOf(k).color)}</section>
@@ -721,14 +846,14 @@ function viewSemaine(){
     <section class="card">
       <h2 style="text-transform:capitalize">${esc(monthName)}</h2>
       <div class="kpis">
-        <div class="kpi"><b class="num">${fmt(mTotal)}</b><span>travaillées</span></div>
-        <div class="kpi"><b class="num">${fmt(mTarget)}</b><span>prévues sur le mois</span></div>
-        <div class="kpi"><b class="num" style="color:${mToDate-mTargetToDate>=0?'var(--ok)':'var(--warn)'}">${fmtSigned(mToDate-mTargetToDate)}</b><span>solde à ce jour</span></div>
+        <div class="kpi"><b class="num">${fmtC(mTotal)}</b><span>travaillées</span></div>
+        <div class="kpi"><b class="num">${dnum(mc.work)}</b><span>jours de travail</span></div>
+        <div class="kpi"><b class="num">${mc.work ? fmtC(mc.workMin/mc.work) : '–'}</b><span>moyenne par jour</span></div>
       </div>
       <div class="kpis">
-        <div class="kpi"><b class="num">${fmt(mCharge)}</b><span>charge</span></div>
-        <div class="kpi"><b class="num" style="color:var(--accent)">${fmt(simultMin(mEntries))}</b><span>en simultané</span></div>
-        <div class="kpi"><b class="num" style="color:var(--warn)">${mCharge ? Math.round(mHors/mCharge*100) : 0} %</b><span>hors planning</span></div>
+        <div class="kpi"><b class="num">${fmtC(mCharge)}</b><span>charge</span></div>
+        <div class="kpi"><b class="num" style="color:var(--accent)">${fmtC(simultMin(mEntries))}</b><span>en simultané</span></div>
+        <div class="kpi"><b class="num" style="color:var(--warn)">${mCharge ? Math.round(mHors/mCharge*100) : 0} %</b><span>hors planning</span></div>
       </div>
       <div class="actions"><button class="btn" data-act="exportWeek">Exporter la semaine (CSV)</button><button class="btn" data-act="exportMonth" data-from="${mStart}" data-to="${mEnd}">Exporter le mois (CSV)</button></div>
     </section>
@@ -825,6 +950,88 @@ function viewRecherche(){
   </div>`;
 }
 
+/* ---------- Bilan ---------- */
+const bil = {kind:'mois', anchor:todayISO()};
+function bilRange(){
+  const a = parseISO(bil.anchor), y = a.getFullYear(), m = a.getMonth();
+  if(bil.kind==='semaine'){ const f = mondayOf(bil.anchor), t = addDays(f,6); return [f, t, `Semaine du ${parseISO(f).toLocaleDateString('fr',{day:'numeric',month:'short'})} au ${parseISO(t).toLocaleDateString('fr',{day:'numeric',month:'short',year:'numeric'})}`, null]; }
+  if(bil.kind==='mois') return [toISO(new Date(y,m,1)), toISO(new Date(y,m+1,0)), a.toLocaleDateString('fr',{month:'long',year:'numeric'}), 1];
+  if(bil.kind==='trimestre'){ const q = Math.floor(m/3); return [toISO(new Date(y,q*3,1)), toISO(new Date(y,q*3+3,0)), `${q ? (q+1)+'e' : '1er'} trimestre ${y}`, 3]; }
+  return [y+'-01-01', y+'-12-31', 'Année '+y, null];
+}
+function bilShift(n){
+  const a = parseISO(bil.anchor);
+  if(bil.kind==='semaine') a.setDate(a.getDate()+7*n);
+  else if(bil.kind==='mois'){ a.setDate(1); a.setMonth(a.getMonth()+n); }
+  else if(bil.kind==='trimestre'){ a.setDate(1); a.setMonth(a.getMonth()+3*n); }
+  else a.setFullYear(a.getFullYear()+n);
+  bil.anchor = toISO(a);
+}
+function daysBetween(f, t){ const out = []; for(let d = f; d <= t; d = addDays(d,1)) out.push(d); return out; }
+function viewBilan(){
+  const [from, to, label] = bilRange(), td = todayISO();
+  const end = to < td ? to : td, started = from <= td;
+  const elapsedDays = started ? daysBetween(from, end).length : 0;
+  const list = allEntries().filter(e => e.date>=from && e.date<=to);
+  const pres = presence(list.filter(e => e.date<=end)), charge = sumMin(list);
+  const c = dayCounts(from, end);
+  const yearly = bil.kind==='annee';
+  const weeks = elapsedDays/7;
+  // Émissions
+  const byShow = {}; list.forEach(e => { const k = e.show || ''; (byShow[k] = byShow[k] || {m:0, by:{}, days:new Set()}); const m = dur(e); byShow[k].m += m; byShow[k].by[e.cat] = (byShow[k].by[e.cat]||0) + m; byShow[k].days.add(e.date); });
+  const showRows = Object.entries(byShow).sort((a,b) => b[1].m - a[1].m).map(([k,v]) => {
+    const sh = showOf(k), nm = sh ? sh.name : 'Sans émission', col = sh ? sh.color : '#94A3B8';
+    const det = Object.entries(v.by).sort((x,y) => y[1]-x[1]).map(([cc,m]) => esc(catOf(cc).name)+' '+fmtC(m)).join(', ');
+    return `<tr class="nm"><td colspan="${yearly?4:3}"><span class="chip" style="--c:${esc(col)}"><span class="dot"></span>${esc(nm)}</span> <span class="det muted">${det} · ${v.days.size} j</span></td></tr>
+      <tr class="vals"><td class="r"><b>${fmtC(v.m)}</b></td><td class="r">${weeks>=1 ? fmtC(v.m/weeks) : '–'}</td>${yearly ? `<td class="r">${elapsedDays>=28 ? fmtC(v.m/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r">${charge ? Math.round(v.m/charge*100) : 0} %</td></tr>`;
+  }).join('');
+  const abs = ABS_TYPES.filter(t => c.absBy[t.id]);
+  const kinds = [['semaine','Semaine'],['mois','Mois'],['trimestre','Trimestre'],['annee','Année']];
+  return `<div class="stack">
+    <div class="seg">${kinds.map(([k,l]) => `<button class="pick" data-act="bilKind" data-k="${k}" aria-pressed="${bil.kind===k}">${l}</button>`).join('')}</div>
+    <section class="daynav">
+      <button class="iconbtn" data-act="bilPrev" aria-label="Période précédente">‹</button>
+      <div class="datepick"><strong>${esc(label)}</strong><span class="small muted">${!started ? 'Période à venir' : to>td ? 'En cours, jours comptés jusqu’à aujourd’hui' : 'Période terminée'}</span></div>
+      <button class="iconbtn" data-act="bilNext" aria-label="Période suivante">›</button>
+    </section>
+
+    <section class="card">
+      <h2>Heures par émission</h2>
+      ${showRows ? `<div class="tblwrap"><table class="tbl em"><thead><tr><th class="r">Total</th><th class="r">/ sem.</th>${yearly ? '<th class="r">/ mois</th>' : ''}<th class="r pc">Part</th></tr></thead><tbody>${showRows}
+        <tr class="nm tot"><td colspan="${yearly?4:3}">Total, toutes émissions</td></tr>
+        <tr class="vals tot"><td class="r">${fmtC(charge)}</td><td class="r">${weeks>=1 ? fmtC(charge/weeks) : '–'}</td>${yearly ? `<td class="r">${elapsedDays>=28 ? fmtC(charge/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r">100 %</td></tr></tbody></table></div>
+      <p class="note">Moyennes calculées sur la partie écoulée de la période${weeks<1 ? ', trop courte ici pour une moyenne par semaine' : ''}. Les tâches simultanées comptent chacune pour leur émission.</p>` : '<p class="muted small">Aucune tâche sur cette période.</p>'}
+    </section>
+
+    <section class="card">
+      <h2>Jours de travail et heures</h2>
+      <div class="kpis">
+        <div class="kpi"><b class="num">${dnum(c.work)}</b><span>jours de travail</span></div>
+        <div class="kpi"><b class="num">${fmtC(c.workMin)}</b><span>heures ces jours-là</span></div>
+        <div class="kpi"><b class="num">${c.work ? fmtC(c.workMin/c.work) : '–'}</b><span>moyenne par jour</span></div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><b class="num" style="color:${c.workDaysNoHours?'var(--warn)':'inherit'}">${c.workDaysNoHours}</b><span>jour${c.workDaysNoHours>1?'s':''} sans heure</span></div>
+        <div class="kpi"><b class="num">${c.offWorked}</b><span>week-end ou férié travaillé${c.offWorked>1?'s':''}</span></div>
+        <div class="kpi"><b class="num">${fmtC(c.offMin)}</b><span>heures ces jours-là</span></div>
+      </div>
+      <p class="note">Un jour de semaine compte comme jour de travail, même avec peu ou pas d’heures : tu n’es ni libre ni en congé. Les jours fériés en semaine et les congés n’en font pas partie. Total de présence sur la période : ${fmt(pres)}.</p>
+    </section>
+
+    <section class="card">
+      <h2>Congés et temps libre</h2>
+      <div class="tblwrap"><table class="tbl"><thead><tr><th></th><th class="r">Total</th><th class="r">Travaillés</th><th class="r">Libres</th></tr></thead><tbody>
+        ${[['sam','Samedis'],['dim','Dimanches'],['fer','Fériés en semaine']].map(([k,l]) => `<tr><td>${l}</td><td class="r">${c[k].t}</td><td class="r" style="color:${c[k].w?'var(--warn)':'inherit'}">${c[k].w}</td><td class="r">${c[k].t-c[k].w}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${abs.length ? `<div class="tblwrap" style="margin-top:12px"><table class="tbl"><thead><tr><th>Congés et absences</th><th class="r">Jours</th></tr></thead><tbody>
+        ${abs.map(t => `<tr><td><span class="chip" style="--c:${t.color}"><span class="dot"></span>${t.label}</span></td><td class="r">${dnum(c.absBy[t.id])}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td class="r">${dnum(abs.reduce((x,t) => x + c.absBy[t.id], 0))}</td></tr>
+      </tbody></table></div>` : '<p class="small muted">Aucun congé ni absence encodé sur cette période.</p>'}
+      <p class="note">Jours comptés jusqu’à aujourd’hui. Un férié qui tombe un week-end n’est pas compté. Un jour est « travaillé » dès qu’une tâche y est encodée.</p>
+    </section>
+  </div>`;
+}
+
 function viewReglages(){
   const st = S.settings, wd = ['L','M','M','J','V','S','D'];
   const storage = S.mode==='db' ? 'Vos données sont liées à votre compte Claude et privées : vous les retrouvez sur tous vos appareils.'
@@ -832,12 +1039,15 @@ function viewReglages(){
     : 'Le stockage n’est pas disponible : les données seront perdues à la fermeture. Exportez-les avant de quitter.';
   return `<div class="stack">
     <section class="card stack">
-      <h2>Horaire</h2>
-      <label class="field">Objectif d’heures par jour travaillé<input type="time" id="s-target" value="${minToHM(st.targetMin)}"></label>
-      <p class="small muted" style="margin:0">${fmt(st.targetMin*st.workdays.length)} par semaine avec les jours sélectionnés.</p>
+      <h2>Semaine de travail</h2>
       <label class="field">Une demande est urgente si elle arrive moins de … avant le début<input type="time" id="s-urgent" value="${minToHM(st.urgentMin)}"></label>
       <label class="field">Me demander si j’ai oublié le chrono après …<input type="time" id="s-stale" value="${minToHM(st.staleMin)}"></label>
-      <div class="field">Jours travaillés<div class="chips">${wd.map((l,i) => `<button class="pick" data-act="toggleDay" data-d="${i+1}" aria-pressed="${st.workdays.includes(i+1)}" aria-label="${['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'][i]}">${l}</button>`).join('')}</div></div>
+      <div class="field">Jours de semaine travaillés<div class="chips">${wd.map((l,i) => `<button class="pick" data-act="toggleDay" data-d="${i+1}" aria-pressed="${st.workdays.includes(i+1)}" aria-label="${['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'][i]}">${l}</button>`).join('')}</div></div>
+    </section>
+    <section class="card stack">
+      <h2>Jours fériés</h2>
+      <p class="small muted" style="margin:0">Comptés seulement s’ils tombent un jour de semaine : 1er janvier, lundi de Pâques, 1er mai, Ascension, lundi de Pentecôte, 21 juillet, 15 août, 27 septembre, 1er et 11 novembre, 25 décembre.</p>
+      <label class="field">Jours fériés supplémentaires (JJ/MM, séparés par des virgules)<input type="text" id="s-extrahol" value="${esc(st.extraHolidays||'')}" placeholder="Ex. : 02/11, 26/12"></label>
     </section>
     <section class="card">
       <h2>Métiers et couleurs</h2>
@@ -890,7 +1100,7 @@ function openStale(){
   const t = S.settings.timer; if(!t) return;
   const st = new Date(t.startedAt), sec = elapsedSec(t);
   $('#st-text').textContent = `Il a démarré ${t.date===todayISO() ? 'aujourd’hui' : 'le '+dayMed(t.date)} à ${t.start}, il y a ${fmt(Math.floor(sec/60))}. Indique l’heure à laquelle tu as réellement fini, pour ne pas fausser ta présence.`;
-  const guess = new Date(Math.min(Date.now(), st.getTime() + S.settings.targetMin*60000));
+  const guess = new Date(Math.min(Date.now(), st.getTime() + S.settings.staleMin*60000));
   const endEl = $('#st-end'); endEl.value = dtLocal(guess); endEl.min = dtLocal(st); endEl.max = dtLocal(new Date());
   $('#st-err').textContent = '';
   const m = $('#stale'); m.classList.add('open'); m.setAttribute('aria-hidden','false');
@@ -1037,7 +1247,8 @@ const COLMAP = {
   cat:['metier','categorie','activite','type'], show:['emission','projet','programme','emissionouprojet'],
   task:['detail','details','tache','tacherealisee','description'], source:['origine','source','originedelademande'],
   by:['demandepar','demandeur'], asked:['demanderecue','demanderecuele'], status:['statut','etat'],
-  remark:['remarque','remarques','commentaire','commentaires','note','notes']
+  remark:['remarque','remarques','commentaire','commentaires','note','notes'],
+  abroad:['etranger','aletranger'], exc:['exceptionnelle','circonstanceexceptionnelle']
 };
 function parseDate(v){
   v = String(v||'').trim(); let y, m, d, r;
@@ -1102,7 +1313,7 @@ function analyseCSV(text){
     }
     if(start===end){ errors.push(`Ligne ${line} : début et fin identiques (${start})`); return; }
     const catName = g('cat'), showName = g('show');
-    const e = {id:uid()+n, date, start, end, pause, cat:'', show:'', project:'', task:g('task'), status:parseStatus(g('status')), remark:g('remark'),
+    const e = {id:uid()+n, date, start, end, pause, cat:'', show:'', project:'', task:g('task'), status:parseStatus(g('status')), remark:g('remark'), abroad:/^(oui|yes|x|1|vrai)/i.test(g('abroad')), exceptional:/^(oui|yes|x|1|vrai)/i.test(g('exc')),
       source:parseSource(g('source')), requestedBy:g('by'), askedAt:parseAsked(g('asked')), createdAt:now, updatedAt:now};
     if(e.source!=='direct') e.requestedBy = '';
     const k = dupKey(e, catName, showName);
@@ -1211,7 +1422,57 @@ function openItem(kind, id){
 function closeItem(){ const m = $('#itemdlg'); m.classList.remove('open'); m.setAttribute('aria-hidden','true'); item = null; }
 
 /* ---------- Actions ---------- */
+let absEd = null;
+function openAbs(a){
+  absEd = a ? {...a, from:a.date, to:a.date} : {id:null, type:'conge', from:curDate, to:curDate, span:'jour', minutes:120, remark:''};
+  $('#ab-title').textContent = a ? 'Modifier l’absence' : 'Congé ou absence';
+  $('#ab-from').value = absEd.from; $('#ab-to').value = absEd.to; $('#ab-remark').value = absEd.remark || '';
+  $('#ab-to-wrap').style.display = a ? 'none' : '';
+  $('#ab-extra').style.display = a ? '' : 'none';
+  drawAbs();
+  const m = $('#absdlg'); m.classList.add('open'); m.setAttribute('aria-hidden','false');
+}
+function absRangeDays(){
+  const f = $('#ab-from').value, t = absEd.id ? f : ($('#ab-to').value || f);
+  if(!f || t < f) return null;
+  const all = daysBetween(f, t); return {all, planned: all.filter(d => isWorkday(d) && !isHoliday(d))};
+}
+function drawAbs(){
+  $('#ab-types').innerHTML = ABS_TYPES.map(t => `<button type="button" class="pick" style="--c:${t.color}" data-act="absType" data-id="${t.id}" aria-pressed="${absEd.type===t.id}"><span class="dot"></span>${t.label}</button>`).join('');
+  $('#ab-spans').innerHTML = [['jour','Journée'],['demi','Demi-journée']].map(([k,l]) => `<button type="button" class="pick" data-act="absSpan" data-k="${k}" aria-pressed="${absEd.span===k}">${l}</button>`).join('');
+  const r = absRangeDays(), info = $('#ab-info');
+  if(!r) info.textContent = 'La date de fin doit être après la date de début.';
+  else if(absEd.id) info.textContent = (isWorkday(r.all[0]) && !isHoliday(r.all[0])) ? '' : 'Ce jour est un week-end ou un férié : l’absence ne sera pas comptée.';
+  else info.textContent = r.planned.length ? `${r.planned.length} jour${r.planned.length>1?'s':''} de travail ${r.planned.length>1?'seront encodés':'sera encodé'}. Week-ends, fériés et jours non travaillés sont exclus.` : 'Aucun jour de travail prévu dans cette période (week-end, férié ou jour non travaillé).';
+}
+function closeAbs(){ const m = $('#absdlg'); m.classList.remove('open'); m.setAttribute('aria-hidden','true'); absEd = null; }
+
 const ACT = {
+  absNew: () => openAbs(null),
+  absEdit: b => { const a = S.absences.get(b.dataset.id); if(a) openAbs(a); },
+  absClose: () => closeAbs(),
+  absType: b => { absEd.type = b.dataset.id; drawAbs(); },
+  absSpan: b => { absEd.span = b.dataset.k; drawAbs(); },
+  absSave: async () => {
+    if(!absEd) return;
+    const r = absRangeDays(); if(!r){ toast('Vérifie les dates.'); return; }
+    const minutes = 0;
+    const remark = $('#ab-remark').value.trim(), now = new Date().toISOString();
+    if(absEd.id){
+      const a = {...S.absences.get(absEd.id), date:$('#ab-from').value, type:absEd.type, span:absEd.span, minutes, remark};
+      closeAbs(); await putAbs(a); toast('Absence modifiée'); return;
+    }
+    if(!r.planned.length){ toast('Aucun jour de travail prévu dans cette période.'); return; }
+    if(r.planned.length > 31 && !(await askConfirm(`Encoder ${r.planned.length} jours d’absence ?`, 'Encoder', false))) return;
+    const base = {kind:'absence', type:absEd.type, span:absEd.span, minutes, remark, createdAt:now};
+    closeAbs();
+    for(const d of r.planned){ await putAbs({...base, id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), date:d}); }
+    toast(`${r.planned.length} jour${r.planned.length>1?'s':''} d’absence encodé${r.planned.length>1?'s':''}`);
+  },
+  absDelete: async () => { if(!absEd || !absEd.id) return; if(!(await askConfirm('Supprimer cette absence ?', 'Supprimer'))) return; const id = absEd.id; closeAbs(); removeAbs(id); toast('Absence supprimée'); },
+  bilKind: b => { bil.kind = b.dataset.k; render(); },
+  bilPrev: () => { bilShift(-1); render(); },
+  bilNext: () => { bilShift(1); render(); },
   confirmYes: () => endConfirm(true),
   confirmNo: () => endConfirm(false),
   itemOpen: b => openItem(b.dataset.kind, b.dataset.id),
@@ -1244,6 +1505,7 @@ const ACT = {
   endNow: () => { $('#f-end').value = nowHM(); updateFormDur(); },
   fCat: b => { editing.cat = b.dataset.id; drawFormChips(); },
   fShow: b => { editing.show = b.dataset.id; drawFormChips(); },
+
   fSource: b => { readForm(); editing.source = b.dataset.id; drawFormChips(); if(editing.source==='direct') setTimeout(() => $('#f-by').focus(), 30); },
   askedNow: () => { const n = new Date(); $('#f-asked').value = toISO(n)+'T'+nowHM(); updateFormDur(); },
   askedClear: () => { $('#f-asked').value = ''; updateFormDur(); },
@@ -1280,7 +1542,7 @@ const ACT = {
   exportWeek: () => exportRange(weekStart, addDays(weekStart,6), 'semaine-'+weekStart+'.csv'),
   exportMonth: b => exportRange(b.dataset.from, b.dataset.to, 'mois-'+b.dataset.from.slice(0,7)+'.csv'),
   exportAll: () => { if(!S.entries.size){ toast('Rien à exporter pour l’instant.'); return; } saveFile('journal-complet-'+todayISO()+'.csv', toCSV(allEntries()), 'text/csv'); },
-  backup: () => saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries()}, null, 1), 'application/json'),
+  backup: () => saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries(), absences:allAbs()}, null, 1), 'application/json'),
   import: () => $('#importfile').click(),
   reloadLatest: () => location.replace(location.pathname + '?v=' + Date.now()),
   csvImport: () => $('#csvfile').click(),
@@ -1296,6 +1558,7 @@ const ACT = {
 document.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if(!b) return; const f = ACT[b.dataset.act]; if(f){ e.preventDefault(); f(b, e); } });
 document.addEventListener('keydown', e => {
   if(e.key==='Escape' && $('#confirm').classList.contains('open')){ endConfirm(false); return; }
+  if(e.key==='Escape' && $('#absdlg').classList.contains('open')){ closeAbs(); return; }
   if(e.key==='Escape' && $('#itemdlg').classList.contains('open')){ closeItem(); return; }
   if(e.key==='Enter' && e.target.id==='it-name'){ e.preventDefault(); ACT.itemSave(); return; }
   if(e.key==='Escape' && $('#sheet').classList.contains('open')){ closeForm(); return; }
@@ -1306,13 +1569,15 @@ document.addEventListener('input', e => {
   const t = e.target;
   if(t.dataset.q){ Q[t.dataset.q] = t.type==='checkbox' ? t.checked : t.value; if(t.dataset.q==='from'||t.dataset.q==='to') Q.range = 'custom'; render(); return; }
   if(t.closest('#sheet') && ['f-date','f-start','f-end','f-asked'].includes(t.id)) updateFormDur();
+  if(absEd && (t.id==='ab-from' || t.id==='ab-to')) drawAbs();
 });
 document.addEventListener('change', e => {
   const t = e.target;
   if(t.id==='day-date' && t.value){ curDate = t.value; render(); }
+  if(t.id==='s-extrahol'){ S.settings.extraHolidays = t.value.trim(); holCache.clear(); putSettings(); return; }
   if(t.id==='s-stale' && t.value){ const m = tmin(t.value); if(m>=30){ S.settings.staleMin = m; putSettings(); } else toast('Minimum 30 minutes.'); }
   if(t.id==='s-urgent' && t.value){ const m = tmin(t.value); if(m>0){ S.settings.urgentMin = m; putSettings(); } }
-  if(t.id==='s-target' && t.value){ const m = tmin(t.value); if(m>0){ S.settings.targetMin = m; putSettings(); } }
+
   if(t.id==='f-date') updateFormDur();
   if(t.id==='it-color' && item){ item.color = t.value; drawSwatches(); }
 });
@@ -1335,13 +1600,16 @@ $('#importfile').addEventListener('change', async e => {
     const mergeList = (kind, fallback) => { if(!o.settings || !Array.isArray(o.settings[kind])) return; S.settings[kind] = S.settings[kind] || []; o.settings[kind].forEach(c => { if(!c || !c.id) return; const v = {id:String(c.id), name:String(c.name||fallback), color:String(c.color||'#64748B')}; const cur = S.settings[kind].find(x => x.id===v.id); if(cur){ cur.name = v.name; cur.color = v.color; } else S.settings[kind].push(v); }); };
     if(o.settings){
       mergeList('cats', 'Métier'); mergeList('shows', 'Émission');
-      ['targetMin','urgentMin','staleMin'].forEach(k => { if(Number.isFinite(+o.settings[k]) && +o.settings[k] > 0) S.settings[k] = +o.settings[k]; });
+      if(typeof o.settings.extraHolidays==='string') S.settings.extraHolidays = o.settings.extraHolidays;
+      ['urgentMin','staleMin'].forEach(k => { if(Number.isFinite(+o.settings[k]) && +o.settings[k] > 0) S.settings[k] = +o.settings[k]; });
       if(Array.isArray(o.settings.workdays)) S.settings.workdays = o.settings.workdays.map(Number).filter(n => n>=1 && n<=7);
       if(['auto','light','dark'].includes(o.settings.theme)) S.settings.theme = o.settings.theme;
       await putSettings();
     }
-    for(const x of ok){ await putEntry({id: String(x.id || uid()), date:x.date, start:x.start, end:x.end, pause:+x.pause||0, cat:String(x.cat||''), show:String(x.show||''), project:String(x.project||''), source:String(x.source||''), requestedBy:String(x.requestedBy||''), askedAt:String(x.askedAt||''), task:String(x.task||''), status:STATUSES.some(s => s.id===x.status) ? x.status : 'fait', remark:String(x.remark||''), createdAt:x.createdAt||new Date().toISOString(), updatedAt:x.updatedAt||new Date().toISOString()}); }
-    toast(ok.length+' tâche(s) restaurée(s)');
+    for(const x of ok){ await putEntry({id: String(x.id || uid()), date:x.date, start:x.start, end:x.end, pause:+x.pause||0, cat:String(x.cat||''), show:String(x.show||''), project:String(x.project||''), source:String(x.source||''), requestedBy:String(x.requestedBy||''), askedAt:String(x.askedAt||''), task:String(x.task||''), abroad:!!x.abroad, exceptional:!!x.exceptional, status:STATUSES.some(s => s.id===x.status) ? x.status : 'fait', remark:String(x.remark||''), createdAt:x.createdAt||new Date().toISOString(), updatedAt:x.updatedAt||new Date().toISOString()}); }
+    const okA = Array.isArray(o.absences) ? o.absences.filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.date||'')) : [];
+    for(const a of okA){ await putAbs({id:String(a.id), kind:'absence', date:a.date, type:ABS_TYPES.some(x => x.id===a.type) ? a.type : 'autre', span:a.span==='demi' ? 'demi' : 'jour', minutes:+a.minutes||0, remark:String(a.remark||''), createdAt:a.createdAt||new Date().toISOString()}); }
+    toast(ok.length+' tâche(s)'+(okA.length ? ' et '+okA.length+' absence(s)' : '')+' restaurée(s)');
   }catch(err){ toast('Ce fichier n’est pas une sauvegarde valide du journal.'); }
 });
 
