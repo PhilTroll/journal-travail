@@ -3,6 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Journal">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#181F2B" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="apple-touch-icon.png">
 <title>Journal de travail</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -408,13 +416,7 @@ const DEFAULT_SETTINGS = {
     {id:'m4', name:'Voix off', color:'#E05D2A'},
     {id:'m5', name:'Assemblage', color:'#F59E0B'}
   ],
-  shows: [
-    {id:'s1', name:'Lundi Sports', color:'#16A34A'},
-    {id:'s2', name:'ATS', color:'#2F5BEA'},
-    {id:'s3', name:'Face à vous', color:'#DB2777'},
-    {id:'s4', name:'CPSC', color:'#0EA5A0'},
-    {id:'s5', name:'Écran pub', color:'#CA8A04'}
-  ],
+  shows: [],
   urgentMin: 120,
   staleMin: 240, // au-delà, l’app demande si le chrono a été oublié
   timer: null
@@ -858,6 +860,7 @@ function viewReglages(){
         <button class="btn" data-act="exportAll">Tout exporter (CSV pour Excel)</button>
         <button class="btn" data-act="backup">Sauvegarde complète (JSON)</button>
         <button class="btn" data-act="import">Restaurer une sauvegarde</button>
+        <button class="btn ghost" data-act="reloadLatest">Recharger la dernière version</button>
         <button class="btn" data-act="csvImport">Importer un CSV</button>
         <button class="btn ghost" data-act="csvTemplate">Modèle CSV vide</button>
       </div>
@@ -991,6 +994,14 @@ async function saveFile(filename, text, mime){
       if(dl){ await dl.save({filename, data:text}); toast('Fichier prêt : '+filename); return; }
     }
   }catch(err){ if(err && (err.code==='declined')) return; if(err && err.code && err.code!=='not_granted' && err.code!=='capability_disabled' && err.code!=='capability_removed'){ toast('Téléchargement impossible ('+err.code+')'); return; } }
+  const ua = navigator.userAgent || '';
+  const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints||0) > 1);
+  if(ios && navigator.share && typeof File==='function'){
+    try{
+      const file = new File([text], filename, {type: mime.includes('csv') ? 'text/csv' : 'application/json'});
+      if(!navigator.canShare || navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; }
+    }catch(err){ if(err && err.name==='AbortError') return; }
+  }
   try{
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text],{type:mime})); a.download = filename;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
@@ -1271,6 +1282,7 @@ const ACT = {
   exportAll: () => { if(!S.entries.size){ toast('Rien à exporter pour l’instant.'); return; } saveFile('journal-complet-'+todayISO()+'.csv', toCSV(allEntries()), 'text/csv'); },
   backup: () => saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries()}, null, 1), 'application/json'),
   import: () => $('#importfile').click(),
+  reloadLatest: () => location.replace(location.pathname + '?v=' + Date.now()),
   csvImport: () => $('#csvfile').click(),
   csvTemplate: () => saveFile('modele-import-journal.csv', csvTemplate(), 'text/csv'),
   impGo: () => runImport(),
@@ -1319,8 +1331,15 @@ $('#importfile').addEventListener('change', async e => {
     if(!o || !Array.isArray(o.entries)) throw new Error('format');
     const ok = o.entries.filter(x => x && typeof x.date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && typeof x.start==='string' && typeof x.end==='string');
     if(!(await askConfirm(`Restaurer ${ok.length} tâche(s) ? Les tâches existantes sont conservées ; celles qui ont le même identifiant sont remplacées.`, 'Restaurer', false))) return;
-    if(o.settings && Array.isArray(o.settings.shows)){ S.settings.shows = S.settings.shows || []; const known = new Set(S.settings.shows.map(c => c.id)); o.settings.shows.forEach(c => { if(c && c.id && !known.has(c.id)) S.settings.shows.push({id:String(c.id), name:String(c.name||'Émission'), color:String(c.color||'#64748B')}); }); }
-    if(o.settings && Array.isArray(o.settings.cats)){ const known = new Set(S.settings.cats.map(c => c.id)); o.settings.cats.forEach(c => { if(c && c.id && !known.has(c.id)) S.settings.cats.push({id:String(c.id), name:String(c.name||'Catégorie'), color:String(c.color||'#64748B')}); }); await putSettings(); }
+    // Restaurer métiers et émissions : ajoute les absents, reprend nom et couleur des existants
+    const mergeList = (kind, fallback) => { if(!o.settings || !Array.isArray(o.settings[kind])) return; S.settings[kind] = S.settings[kind] || []; o.settings[kind].forEach(c => { if(!c || !c.id) return; const v = {id:String(c.id), name:String(c.name||fallback), color:String(c.color||'#64748B')}; const cur = S.settings[kind].find(x => x.id===v.id); if(cur){ cur.name = v.name; cur.color = v.color; } else S.settings[kind].push(v); }); };
+    if(o.settings){
+      mergeList('cats', 'Métier'); mergeList('shows', 'Émission');
+      ['targetMin','urgentMin','staleMin'].forEach(k => { if(Number.isFinite(+o.settings[k]) && +o.settings[k] > 0) S.settings[k] = +o.settings[k]; });
+      if(Array.isArray(o.settings.workdays)) S.settings.workdays = o.settings.workdays.map(Number).filter(n => n>=1 && n<=7);
+      if(['auto','light','dark'].includes(o.settings.theme)) S.settings.theme = o.settings.theme;
+      await putSettings();
+    }
     for(const x of ok){ await putEntry({id: String(x.id || uid()), date:x.date, start:x.start, end:x.end, pause:+x.pause||0, cat:String(x.cat||''), show:String(x.show||''), project:String(x.project||''), source:String(x.source||''), requestedBy:String(x.requestedBy||''), askedAt:String(x.askedAt||''), task:String(x.task||''), status:STATUSES.some(s => s.id===x.status) ? x.status : 'fait', remark:String(x.remark||''), createdAt:x.createdAt||new Date().toISOString(), updatedAt:x.updatedAt||new Date().toISOString()}); }
     toast(ok.length+' tâche(s) restaurée(s)');
   }catch(err){ toast('Ce fichier n’est pas une sauvegarde valide du journal.'); }
