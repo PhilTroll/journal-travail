@@ -198,6 +198,19 @@ input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and
 .swatches button{aspect-ratio:1;border-radius:10px;border:2px solid transparent;background:var(--c);min-height:40px}
 .swatches button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 2px var(--surface)}
 #confirm{z-index:40} #itemdlg{z-index:30} #importdlg{z-index:30}
+.favs{display:flex;flex-direction:column;gap:6px}
+.favs .chips{gap:6px}
+.favs .pick{font-size:.82rem;min-height:36px;padding:6px 10px}
+.backup{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
+.backup p{margin:0 0 10px;font-size:.9rem}
+.delta{font-size:.72rem;font-weight:650;margin-left:6px;white-space:nowrap}
+.delta.up{color:var(--ok)} .delta.down{color:var(--warn)} .delta.new{color:var(--accent)}
+.tbl.em tr.nm{cursor:pointer}
+.tbl.em tr.nm td .go{color:var(--muted);font-size:.8rem;margin-left:4px}
+.mbar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:4px}
+.mbar span{display:block;height:100%;background:var(--c)}
+#sumtext{width:100%;min-height:240px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface2);color:var(--ink);font:inherit;font-size:.88rem;line-height:1.45}
+#sumdlg{z-index:30}
 .absrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:14px;padding:12px 14px;cursor:pointer;width:100%;text-align:left}
 .absrow b{display:block}
 .tbl{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
@@ -344,6 +357,7 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
       <button class="btn primary" data-act="save">Enregistrer</button>
       <button class="btn ghost" data-act="closeForm">Annuler</button>
     </div>
+    <div class="actions"><button class="btn ghost" data-act="favAdd">☆ Garder comme favori</button></div>
     <div class="actions" id="f-extra">
       <button class="btn" data-act="duplicate">Copier vers aujourd’hui</button>
       <button class="btn danger" data-act="delete">Supprimer</button>
@@ -420,6 +434,20 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
     <div class="actions" id="ab-extra"><button class="btn danger" data-act="absDelete">Supprimer</button></div>
   </div>
 </div>
+<div class="sheet" id="sumdlg" aria-hidden="true">
+  <div class="backdrop" data-act="sumClose"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="sum-title">
+    <div class="grab"></div>
+    <h2 id="sum-title">Résumé à partager</h2>
+    <textarea id="sumtext" readonly></textarea>
+    <p class="small muted" style="margin:8px 0 0">Relis avant d’envoyer : le texte reprend tes chiffres tels quels.</p>
+    <div class="actions">
+      <button class="btn primary" data-act="sumCopy">Copier</button>
+      <button class="btn" data-act="sumShare" id="sum-share">Partager</button>
+      <button class="btn ghost" data-act="sumClose">Fermer</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="importfile" accept="application/json,.json" class="sr" tabindex="-1">
 <input type="file" id="csvfile" accept=".csv,text/csv,text/plain,.txt" class="sr" tabindex="-1">
@@ -481,6 +509,8 @@ const DEFAULT_SETTINGS = {
   shows: [],
   urgentMin: 120,
   staleMin: 240, // au-delà, l’app demande si le chrono a été oublié
+  favs: [],          // tâches favorites
+  lastBackup: '',    // date de la dernière sauvegarde JSON
   timer: null
 };
 // Ancien modèle (8 tâches fusionnées) vers métier + émission
@@ -534,33 +564,36 @@ const ABS_TYPES = [
 const absType = id => ABS_TYPES.find(x => x.id===id) || ABS_TYPES[3];
 const allAbs = () => [...(S.absences||new Map()).values()];
 const absOn = d => allAbs().filter(a => a.date===d);
+const absReal = d => absOn(d).filter(a => a.type!=='dispo');          // vraies absences (congés…)
+const dispoOf = d => absOn(d).find(a => a.type==='dispo') || null;     // « disponible, rien demandé »
+const isDispo = d => !!dispoOf(d) && !entriesOn(d).length;
 const absDays = a => a.span==='demi' ? .5 : 1;
 const absLabel = a => a.span==='demi' ? 'demi-journée' : 'journée';
 // Un férié ne compte que s’il tombe un jour de semaine habituellement travaillé
 const isWeekHoliday = d => isHoliday(d) && isWorkday(d);
 // Valeur « jour de travail » : 1 pour un jour de semaine, moins les congés ; 0 le week-end et les fériés.
 // Peu importe le nombre d’heures prestées : en semaine, tu n’es pas libre.
-const workValue = d => (isWorkday(d) && !isHoliday(d)) ? Math.max(0, 1 - absOn(d).reduce((t,a) => t + absDays(a), 0)) : 0;
+const workValue = d => (isWorkday(d) && !isHoliday(d)) ? Math.max(0, 1 - absReal(d).reduce((t,a) => t + absDays(a), 0)) : 0;
 function dayStatus(d){
   if(isWeekHoliday(d)) return {k:'fer', label:'Jour férié : '+holidayName(d)};
   if(!isWorkday(d)) return {k:'we', label: isoWeekday(d)===6 ? 'Samedi' : isoWeekday(d)===7 ? 'Dimanche' : 'Jour non travaillé'};
-  const a = absOn(d); if(!a.length) return {k:'trav', label:'Jour de travail'};
+  const a = absReal(d); if(!a.length) return {k:'trav', label: isDispo(d) ? 'Jour de travail · disponible, rien demandé' : 'Jour de travail'};
   const v = workValue(d), t = absType(a[0].type).label;
   return v<=0 ? {k:'abs', label:t} : {k:'demi', label:'Demi-jour de travail · '+t+' (demi-journée)'};
 }
 // Bilan des jours sur une période (jusqu’à une date de fin incluse)
 function dayCounts(from, end){
-  const c = {work:0, workDaysNoHours:0, workMin:0, offWorked:0, offMin:0, sam:{t:0,w:0}, dim:{t:0,w:0}, fer:{t:0,w:0}, absBy:{}};
+  const c = {work:0, dispo:0, noEntry:0, workDaysNoHours:0, workMin:0, offWorked:0, offMin:0, sam:{t:0,w:0}, dim:{t:0,w:0}, fer:{t:0,w:0}, absBy:{}};
   if(end < from) return c;
   for(let d = from; d <= end; d = addDays(d,1)){
     const l = entriesOn(d), m = presence(l), v = workValue(d);
     c.work += v;
-    if(v>0){ c.workMin += m; if(!l.length) c.workDaysNoHours++; }
+    if(v>0){ c.workMin += m; if(!l.length){ c.workDaysNoHours++; if(dispoOf(d)) c.dispo++; else c.noEntry++; } }
     else if(l.length){ c.offWorked++; c.offMin += m; }
     if(isWeekHoliday(d)){ c.fer.t++; if(l.length) c.fer.w++; }
     else if(isoWeekday(d)===6){ c.sam.t++; if(l.length) c.sam.w++; }
     else if(isoWeekday(d)===7){ c.dim.t++; if(l.length) c.dim.w++; }
-    absOn(d).forEach(a => { (c.absBy[a.type] = c.absBy[a.type] || 0); c.absBy[a.type] += (isWorkday(d) && !isHoliday(d)) ? absDays(a) : 0; });
+    absReal(d).forEach(a => { (c.absBy[a.type] = c.absBy[a.type] || 0); c.absBy[a.type] += (isWorkday(d) && !isHoliday(d)) ? absDays(a) : 0; });
   }
   return c;
 }
@@ -702,14 +735,14 @@ function applyTheme(){
 }
 
 /* ---------- Rendu ---------- */
-function readHash(){ const h = location.hash.slice(1); view = ['jour','semaine','recherche','bilan','reglages'].includes(h) ? h : 'jour'; }
+function readHash(){ const h = location.hash.slice(1); view = ['jour','semaine','recherche','bilan','emission','reglages'].includes(h) ? h : 'jour'; }
 function render(){
   const ae = document.activeElement, aid = ae && ae.id && $('#main').contains(ae) ? ae.id : null;
   let sel = null; try{ sel = [ae.selectionStart, ae.selectionEnd]; }catch(e){}
   simCache = new Map();
-  $('#main').innerHTML = ({jour:viewJour, semaine:viewSemaine, recherche:viewRecherche, bilan:viewBilan, reglages:viewReglages})[view]();
-  document.querySelectorAll('nav.tabs a').forEach(a => { if(a.dataset.tab===view) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
-  $('#fab').style.display = (view==='reglages' || view==='bilan') ? 'none' : '';
+  $('#main').innerHTML = ({jour:viewJour, semaine:viewSemaine, recherche:viewRecherche, bilan:viewBilan, emission:viewEmission, reglages:viewReglages})[view]();
+  document.querySelectorAll('nav.tabs a').forEach(a => { if(a.dataset.tab===(view==='emission' ? 'bilan' : view)) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  $('#fab').style.display = (view==='reglages' || view==='bilan' || view==='emission') ? 'none' : '';
   if(aid){ const el = document.getElementById(aid); if(el){ el.focus({preventScroll:true}); try{ if(sel && sel[0]!=null) el.setSelectionRange(sel[0], sel[1]); }catch(e){} } }
   tickTimer();
 }
@@ -759,15 +792,18 @@ function ribbon(list, date){
 function viewJour(){
   const list = entriesOn(curDate), total = presence(list), charge = sumMin(list), sim = simultMin(list);
   const hors = list.filter(e => e.source==='direct'), urg = list.filter(isUrgent);
-  const absL = absOn(curDate), st = dayStatus(curDate);
+  const absL = absReal(curDate), st = dayStatus(curDate), dispo = dispoOf(curDate);
+  const favs = (S.settings.favs||[]).filter(f => S.settings.cats.some(c => c.id===f.cat));
+  const canDispo = workValue(curDate) > 0 && curDate <= todayISO();
   const stColor = {trav:'var(--accent)', demi:'var(--accent)', fer:'var(--warn)', abs:'var(--ok)', we:'var(--muted)'}[st.k];
-  const bal = `<div class="balance" style="color:${stColor}">${esc(st.label)}${(st.k==='we'||st.k==='fer'||st.k==='abs') && total ? ' · travaillé' : ''}</div>`;
+  const bal = `<div class="balance" style="color:${stColor}">${esc(st.label)}${st.k==='fer' && total ? ' · férié travaillé' : (st.k==='we'||st.k==='abs') && total ? ' · travaillé' : ''}</div>`;
   const t = S.settings.timer;
   const timerHtml = t
     ? `<section class="card timer running"><div class="grow"><div class="small muted"><span class="pulse"></span>Chrono démarré à ${esc(t.start)} le ${esc(dayMed(t.date))}</div><div class="clock num" id="timer-el">0:00:00</div></div>
         <button class="btn primary" data-act="stopTimer">Arrêter et encoder</button><button class="btn ghost" data-act="cancelTimer">Abandonner</button></section>`
     : `<button class="btn block" data-act="startTimer">▶︎ Démarrer le chrono (l’heure de début est notée)</button>`;
   return `<div class="stack">
+    ${backupBanner()}
     <section class="daynav">
       <button class="iconbtn" data-act="prevDay" aria-label="Jour précédent">‹</button>
       <label class="datepick"><strong>${esc(dayLong(curDate))}</strong><span class="small muted">${curDate===todayISO() ? 'Aujourd’hui' : 'Touchez pour changer de date'}</span><input type="date" id="day-date" value="${curDate}" aria-label="Choisir la date"></label>
@@ -787,8 +823,10 @@ function viewJour(){
     ${absL.map(a => `<button class="absrow" style="--c:${absType(a.type).color}" data-act="absEdit" data-id="${esc(a.id)}"><span style="font-size:1.4rem">🌴</span><span><b>${esc(absType(a.type).label)}</b><span class="small muted">${esc(absLabel(a))}${a.remark ? ' · '+esc(a.remark) : ''}</span></span><span class="go small muted" style="margin-left:auto">Modifier ›</span></button>`).join('')}
     ${timerHtml}
     <button class="btn ghost block" data-act="absNew">Encoder un congé ou une absence</button>
-    ${list.length ? list.map(e => entryCard(e)).join('') :
-      `<div class="card empty">Rien d’encodé pour ce jour.<br><button class="btn primary" style="margin-top:12px" data-act="new">Encoder une tâche</button>${entriesOn(addDays(curDate,-1)).length ? `<br><button class="link" data-act="copyPrev">Reprendre les tâches de la veille</button>` : ''}</div>`}
+    ${favs.length ? `<div class="favs"><span class="small muted">Favoris : touche pour encoder</span><div class="chips">${favs.map(f => { const c = catOf(f.cat), sh = showOf(f.show); return `<button class="pick" style="--c:${esc((sh||c).color)}" data-act="favUse" data-id="${esc(f.id)}"><span class="dot"></span>${esc(c.name)}${sh ? ' · '+esc(sh.name) : ''}${f.task ? ' · '+esc(f.task) : ''}</button>`; }).join('')}</div></div>` : ''}
+    ${list.length ? list.map(e => entryCard(e)).join('') : dispo ?
+      `<div class="card empty"><b style="color:var(--ink)">Disponible, aucun travail demandé.</b><br><span class="small">Ce jour compte comme jour de travail sans tâche.</span><br><button class="btn primary" style="margin-top:12px" data-act="new">Encoder une tâche</button><br><button class="link" data-act="dispoOff" data-id="${esc(dispo.id)}">Retirer « disponible »</button></div>` :
+      `<div class="card empty">Rien d’encodé pour ce jour.<br><button class="btn primary" style="margin-top:12px" data-act="new">Encoder une tâche</button>${canDispo ? `<br><button class="btn" style="margin-top:10px" data-act="dispoOn">Disponible, rien demandé</button>` : ''}${entriesOn(addDays(curDate,-1)).length ? `<br><button class="link" data-act="copyPrev">Reprendre les tâches de la veille</button>` : ''}</div>`}
   </div>`;
 }
 
@@ -803,7 +841,7 @@ function viewSemaine(){
     const segs = Object.entries(byCat).map(([c,m]) => `<span style="--c:${esc(catOf(c).color)};width:${(m/maxDay*100).toFixed(2)}%" title="${esc(catOf(c).name)} : ${fmt(m)}"></span>`).join('');
     const tgt = '';
     return `<div class="wrow ${x.d===todayISO()?'today':''} ${x.work?'':'off'}" data-act="gotoDay" data-date="${x.d}" role="button" tabindex="0">
-      <div class="wl">${esc(dayShort(x.d))}${isWeekHoliday(x.d) ? ' ★' : ''}${absOn(x.d).length ? ' 🌴' : ''}</div><div class="wbar">${segs}${tgt}</div><div class="wt num">${x.t ? fmtC(x.t) : '–'}${x.c>x.t ? `<div class="small" style="color:var(--accent);font-weight:600">⇄ ${fmtC(x.c-x.t)}</div>` : ''}</div></div>`;
+      <div class="wl">${esc(dayShort(x.d))}${isWeekHoliday(x.d) ? ' ★' : ''}${absReal(x.d).length ? ' 🌴' : ''}${isDispo(x.d) ? ' ○' : ''}</div><div class="wbar">${segs}${tgt}</div><div class="wt num">${x.t ? fmtC(x.t) : '–'}${x.c>x.t ? `<div class="small" style="color:var(--accent);font-weight:600">⇄ ${fmtC(x.c-x.t)}</div>` : ''}</div></div>`;
   }).join('');
   const all = data.flatMap(x => x.l);
   const charge = sumMin(all), sim = simultMin(all);
@@ -837,7 +875,7 @@ function viewSemaine(){
         <div class="kpi"><b class="num">${wc.work ? fmtC(wc.workMin/wc.work) : '–'}</b><span>moyenne par jour</span></div>
       </div>
       <div style="margin-top:12px">${rows}</div>
-      <p class="small muted" style="margin:6px 0 0">Heures de présence : les tâches simultanées ne comptent qu’une fois. Les barres montrent la charge réelle, le chiffre ⇄ le temps passé en simultané. ★ jour férié, 🌴 congé. Un jour de semaine compte comme jour de travail même sans heure encodée.</p>
+      <p class="small muted" style="margin:6px 0 0">Heures de présence : les tâches simultanées ne comptent qu’une fois. Les barres montrent la charge réelle, le chiffre ⇄ le temps passé en simultané. ★ jour férié, 🌴 congé, ○ disponible sans travail demandé. Un jour de semaine compte comme jour de travail même sans heure encodée.</p>
     </section>
     ${orgSection(all, charge, sim, 'cette semaine')}
     <section class="card"><h2>Par métier</h2>${breakdown(e => e.cat, k => catOf(k).name, k => catOf(k).color)}</section>
@@ -978,11 +1016,18 @@ function viewBilan(){
   const yearly = bil.kind==='annee';
   const weeks = elapsedDays/7;
   // Émissions
+  // Comparaison : même portion de la période précédente
+  const savedAnchor = bil.anchor; bilShift(-1); const [pFrom, pTo] = bilRange(); bil.anchor = savedAnchor;
+  const pEndCand = addDays(pFrom, Math.max(0, elapsedDays-1)), pEnd = to > td ? (pEndCand < pTo ? pEndCand : pTo) : pTo;
+  const prevBy = {}; let prevTotal = 0;
+  if(started) allEntries().filter(e => e.date>=pFrom && e.date<=pEnd).forEach(e => { const k = e.show || ''; prevBy[k] = (prevBy[k]||0) + dur(e); prevTotal += dur(e); });
+  const curDone = {}; list.filter(e => e.date<=end).forEach(e => { const k = e.show || ''; curDone[k] = (curDone[k]||0) + dur(e); });
+  const delta = (cur, prev) => { if(!started) return ''; if(!prev && !cur) return ''; if(!prev) return '<span class="delta new">nouveau</span>'; const d = cur - prev; if(Math.abs(d) < 1) return '<span class="delta">=</span>'; return `<span class="delta ${d>0?'up':'down'}">${d>0?'▲ +':'▼ −'}${fmtC(Math.abs(d))}</span>`; };
   const byShow = {}; list.forEach(e => { const k = e.show || ''; (byShow[k] = byShow[k] || {m:0, by:{}, days:new Set()}); const m = dur(e); byShow[k].m += m; byShow[k].by[e.cat] = (byShow[k].by[e.cat]||0) + m; byShow[k].days.add(e.date); });
   const showRows = Object.entries(byShow).sort((a,b) => b[1].m - a[1].m).map(([k,v]) => {
     const sh = showOf(k), nm = sh ? sh.name : 'Sans émission', col = sh ? sh.color : '#94A3B8';
     const det = Object.entries(v.by).sort((x,y) => y[1]-x[1]).map(([cc,m]) => esc(catOf(cc).name)+' '+fmtC(m)).join(', ');
-    return `<tr class="nm"><td colspan="${yearly?4:3}"><span class="chip" style="--c:${esc(col)}"><span class="dot"></span>${esc(nm)}</span> <span class="det muted">${det} · ${v.days.size} j</span></td></tr>
+    return `<tr class="nm" data-act="openShow" data-id="${k ? esc(k) : '_none'}"><td colspan="${yearly?4:3}"><span class="chip" style="--c:${esc(col)}"><span class="dot"></span>${esc(nm)}</span>${delta(curDone[k]||0, prevBy[k]||0)} <span class="det muted">${det} · ${v.days.size} j</span><span class="go">›</span></td></tr>
       <tr class="vals"><td class="r"><b>${fmtC(v.m)}</b></td><td class="r">${weeks>=1 ? fmtC(v.m/weeks) : '–'}</td>${yearly ? `<td class="r">${elapsedDays>=28 ? fmtC(v.m/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r">${charge ? Math.round(v.m/charge*100) : 0} %</td></tr>`;
   }).join('');
   const abs = ABS_TYPES.filter(t => c.absBy[t.id]);
@@ -994,13 +1039,14 @@ function viewBilan(){
       <div class="datepick"><strong>${esc(label)}</strong><span class="small muted">${!started ? 'Période à venir' : to>td ? 'En cours, jours comptés jusqu’à aujourd’hui' : 'Période terminée'}</span></div>
       <button class="iconbtn" data-act="bilNext" aria-label="Période suivante">›</button>
     </section>
+    ${started ? `<button class="btn block" data-act="summary">Résumé à partager</button>` : ''}
 
     <section class="card">
       <h2>Heures par émission</h2>
       ${showRows ? `<div class="tblwrap"><table class="tbl em"><thead><tr><th class="r">Total</th><th class="r">/ sem.</th>${yearly ? '<th class="r">/ mois</th>' : ''}<th class="r pc">Part</th></tr></thead><tbody>${showRows}
-        <tr class="nm tot"><td colspan="${yearly?4:3}">Total, toutes émissions</td></tr>
+        <tr class="nm tot"><td colspan="${yearly?4:3}">Total, toutes émissions${delta(sumMin(list.filter(e => e.date<=end)), prevTotal)}</td></tr>
         <tr class="vals tot"><td class="r">${fmtC(charge)}</td><td class="r">${weeks>=1 ? fmtC(charge/weeks) : '–'}</td>${yearly ? `<td class="r">${elapsedDays>=28 ? fmtC(charge/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r">100 %</td></tr></tbody></table></div>
-      <p class="note">Moyennes calculées sur la partie écoulée de la période${weeks<1 ? ', trop courte ici pour une moyenne par semaine' : ''}. Les tâches simultanées comptent chacune pour leur émission.</p>` : '<p class="muted small">Aucune tâche sur cette période.</p>'}
+      <p class="note">Moyennes calculées sur la partie écoulée de la période${weeks<1 ? ', trop courte ici pour une moyenne par semaine' : ''}. Les tâches simultanées comptent chacune pour leur émission. ▲▼ : écart avec la même portion de la période précédente. Touche une émission pour voir sa fiche.</p>` : '<p class="muted small">Aucune tâche sur cette période.</p>'}
     </section>
 
     <section class="card">
@@ -1011,11 +1057,11 @@ function viewBilan(){
         <div class="kpi"><b class="num">${c.work ? fmtC(c.workMin/c.work) : '–'}</b><span>moyenne par jour</span></div>
       </div>
       <div class="kpis">
-        <div class="kpi"><b class="num" style="color:${c.workDaysNoHours?'var(--warn)':'inherit'}">${c.workDaysNoHours}</b><span>jour${c.workDaysNoHours>1?'s':''} sans heure</span></div>
-        <div class="kpi"><b class="num">${c.offWorked}</b><span>week-end ou férié travaillé${c.offWorked>1?'s':''}</span></div>
-        <div class="kpi"><b class="num">${fmtC(c.offMin)}</b><span>heures ces jours-là</span></div>
+        <div class="kpi"><b class="num" style="color:${c.dispo?'var(--warn)':'inherit'}">${c.dispo}</b><span>disponible${c.dispo>1?'s':''} sans travail</span></div>
+        <div class="kpi"><b class="num" style="color:${c.noEntry?'var(--bad)':'inherit'}">${c.noEntry}</b><span>non encodé${c.noEntry>1?'s':''}</span></div>
+        <div class="kpi"><b class="num">${c.offWorked}</b><span>week-end ou férié travaillé${c.offWorked>1?'s':''} · ${fmtC(c.offMin)}</span></div>
       </div>
-      <p class="note">Un jour de semaine compte comme jour de travail, même avec peu ou pas d’heures : tu n’es ni libre ni en congé. Les jours fériés en semaine et les congés n’en font pas partie. Total de présence sur la période : ${fmt(pres)}.</p>
+      <p class="note">Un jour de semaine compte comme jour de travail, même avec peu ou pas d’heures : tu n’es ni libre ni en congé. « Disponible sans travail » : jours marqués comme tels. « Non encodé » : jours de travail sans tâche ni marque, à compléter. Les jours fériés en semaine et les congés n’en font pas partie. Total de présence sur la période : ${fmt(pres)}.</p>
     </section>
 
     <section class="card">
@@ -1032,6 +1078,83 @@ function viewBilan(){
   </div>`;
 }
 
+/* ---------- Fiche d’une émission ---------- */
+const emi = {id:'', year:new Date().getFullYear()};
+function viewEmission(){
+  const id = emi.id==='_none' ? '' : emi.id, sh = showOf(id);
+  const nm = sh ? sh.name : 'Sans émission', col = sh ? sh.color : '#94A3B8', y = emi.year, td = todayISO();
+  const list = allEntries().filter(e => (e.show||'')===id && e.date.startsWith(y+'-')).sort((a,b) => byStart(b,a));
+  const total = sumMin(list), days = new Set(list.map(e => e.date)).size;
+  const months = [...Array(12)].map((_,i) => { const l = list.filter(e => +e.date.slice(5,7)===i+1); return {i, m:sumMin(l), d:new Set(l.map(e => e.date)).size}; });
+  const max = Math.max(1, ...months.map(x => x.m));
+  const elapsedMonths = y < +td.slice(0,4) ? 12 : y > +td.slice(0,4) ? 0 : +td.slice(5,7);
+  const byCat = {}; list.forEach(e => byCat[e.cat] = (byCat[e.cat]||0) + dur(e));
+  const shown = list.slice(0, 60);
+  return `<div class="stack">
+    <button class="link" data-act="backBilan">‹ Retour au bilan</button>
+    <section class="daynav">
+      <button class="iconbtn" data-act="emiPrev" aria-label="Année précédente">‹</button>
+      <div class="datepick"><strong><span class="chip" style="--c:${esc(col)};font-size:.95rem"><span class="dot"></span>${esc(nm)}</span></strong><span class="small muted">Année ${y}</span></div>
+      <button class="iconbtn" data-act="emiNext" aria-label="Année suivante">›</button>
+    </section>
+    <section class="card">
+      <div class="kpis">
+        <div class="kpi"><b class="num">${fmtC(total)}</b><span>sur l’année</span></div>
+        <div class="kpi"><b class="num">${days}</b><span>jour${days>1?'s':''}</span></div>
+        <div class="kpi"><b class="num">${elapsedMonths ? fmtC(total/elapsedMonths) : '–'}</b><span>par mois</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <h2>Mois par mois</h2>
+      ${total ? `<div class="tblwrap"><table class="tbl"><tbody>${months.map(x => `<tr style="${x.m ? '' : 'opacity:.45'}"><td style="width:5.5em">${esc(new Date(y, x.i, 1).toLocaleDateString('fr',{month:'short'}))}</td><td style="width:100%"><div class="mbar" style="--c:${esc(col)}"><span style="width:${(x.m/max*100).toFixed(1)}%"></span></div></td><td class="r"><b>${x.m ? fmtC(x.m) : '–'}</b></td><td class="r">${x.d ? x.d+' j' : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Aucune tâche pour cette émission cette année.</p>'}
+    </section>
+    ${total ? `<section class="card"><h2>Par métier</h2>${Object.entries(byCat).sort((a,b) => b[1]-a[1]).map(([c,m]) => `<div class="brk" style="--c:${esc(catOf(c).color)}"><span>${esc(catOf(c).name)}</span><b class="num">${fmtC(m)} <span class="muted small">${Math.round(m/total*100)} %</span></b><div class="bar"><span style="width:${(m/total*100).toFixed(1)}%"></span></div></div>`).join('')}</section>` : ''}
+    ${total ? `<section class="card stack"><h2>Tâches (${list.length})</h2>${shown.map(e => entryCard(e, {showDate:true})).join('')}${list.length > shown.length ? `<p class="small muted">Les ${shown.length} plus récentes sont affichées. L’export contient tout.</p>` : ''}
+      <button class="btn" data-act="emiExport">Exporter l’année (CSV)</button></section>` : ''}
+  </div>`;
+}
+
+/* ---------- Résumé à partager ---------- */
+function buildSummary(){
+  const [from, to, label] = bilRange(), td = todayISO(), end = to < td ? to : td;
+  const list = allEntries().filter(e => e.date>=from && e.date<=end);
+  const c = dayCounts(from, end), pres = presence(list), charge = sumMin(list);
+  const by = {}; list.forEach(e => { const k = e.show || ''; by[k] = (by[k]||0) + dur(e); });
+  const shows = Object.entries(by).sort((a,b) => b[1]-a[1]).map(([k,m]) => `${showOf(k)?.name || 'Sans émission'} ${fmt(m)} (${charge ? Math.round(m/charge*100) : 0} %)`);
+  const hors = list.filter(e => e.source==='direct'), urg = list.filter(e => e.source==='direct' && isUrgent(e));
+  const absDaysTot = Object.values(c.absBy).reduce((a,b) => a+b, 0);
+  const L = [];
+  L.push(`Bilan : ${label}${to > td ? ' (jusqu’à aujourd’hui)' : ''}`);
+  L.push(`• ${dnum(c.work)} jour${c.work>1?'s':''} de travail, ${fmt(pres)} de présence${c.work ? `, soit ${fmt(c.workMin/c.work)} par jour de travail` : ''}`);
+  if(c.dispo) L.push(`• ${c.dispo} jour${c.dispo>1?'s':''} disponible${c.dispo>1?'s':''} sans travail demandé`);
+  if(c.noEntry) L.push(`• ${c.noEntry} jour${c.noEntry>1?'s':''} de travail non encodé${c.noEntry>1?'s':''}`);
+  if(c.offWorked) L.push(`• ${c.offWorked} week-end${c.offWorked>1?'s':''} ou férié${c.offWorked>1?'s':''} travaillé${c.offWorked>1?'s':''} (${fmt(c.offMin)})`);
+  if(shows.length) L.push(`• Par émission : ${shows.join(', ')}`);
+  if(hors.length) L.push(`• ${hors.length} demande${hors.length>1?'s':''} hors planning (${fmt(sumMin(hors))}, ${charge ? Math.round(sumMin(hors)/charge*100) : 0} % du temps de tâches)${urg.length ? `, dont ${urg.length} urgente${urg.length>1?'s':''}` : ''}`);
+  const sim = simultMin(list); if(sim) L.push(`• ${fmt(sim)} de tâches menées en simultané`);
+  if(absDaysTot) L.push(`• ${dnum(absDaysTot)} jour${absDaysTot>1?'s':''} de congé ou d’absence`);
+  return L.join('\n');
+}
+function openSummary(){
+  $('#sumtext').value = buildSummary();
+  $('#sum-share').style.display = navigator.share ? '' : 'none';
+  const m = $('#sumdlg'); m.classList.add('open'); m.setAttribute('aria-hidden','false');
+}
+function closeSummary(){ const m = $('#sumdlg'); m.classList.remove('open'); m.setAttribute('aria-hidden','true'); }
+
+/* ---------- Rappel de sauvegarde ---------- */
+function daysSinceBackup(){ const l = S.settings.lastBackup; return l ? Math.floor((Date.now() - new Date(l).getTime())/864e5) : null; }
+function backupBanner(){
+  if(S.mode==='db' || S.mode==='loading' || !S.entries.size) return '';
+  const n = daysSinceBackup();
+  if(n!=null && n < 7) return '';
+  return `<section class="card backup"><p><b>${n==null ? 'Aucune sauvegarde encore faite.' : `Dernière sauvegarde il y a ${n} jour${n>1?'s':''}.`}</b> Tes données ne sont que sur ce téléphone : enregistre une copie dans Fichiers ou iCloud.</p><button class="btn primary" data-act="backup">Sauvegarder maintenant</button></section>`;
+}
+async function doBackup(){
+  const ok = await saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries(), absences:allAbs()}, null, 1), 'application/json');
+  if(ok){ S.settings.lastBackup = new Date().toISOString(); putSettings(); }
+}
+
 function viewReglages(){
   const st = S.settings, wd = ['L','M','M','J','V','S','D'];
   const storage = S.mode==='db' ? 'Vos données sont liées à votre compte Claude et privées : vous les retrouvez sur tous vos appareils.'
@@ -1046,7 +1169,8 @@ function viewReglages(){
     </section>
     <section class="card stack">
       <h2>Jours fériés</h2>
-      <p class="small muted" style="margin:0">Comptés seulement s’ils tombent un jour de semaine : 1er janvier, lundi de Pâques, 1er mai, Ascension, lundi de Pentecôte, 21 juillet, 15 août, 27 septembre, 1er et 11 novembre, 25 décembre.</p>
+      <p class="small muted" style="margin:0">Reconnus automatiquement chaque année. Un férié qui tombe un week-end n’est pas compté.</p>
+      <div class="tblwrap"><table class="tbl"><thead><tr><th>Fériés ${new Date().getFullYear()}</th><th class="r">Date</th></tr></thead><tbody>${[...holidays(new Date().getFullYear()).entries()].sort((a,b) => a[0].localeCompare(b[0])).map(([d,n]) => `<tr style="${isWorkday(d) ? '' : 'opacity:.5'}"><td>${esc(n)}${d===todayISO() ? ' · <b style="color:var(--warn)">aujourd’hui</b>' : ''}</td><td class="r">${esc(parseISO(d).toLocaleDateString('fr',{weekday:'short',day:'numeric',month:'short'}))}${isWorkday(d) ? '' : ' (week-end)'}</td></tr>`).join('')}</tbody></table></div>
       <label class="field">Jours fériés supplémentaires (JJ/MM, séparés par des virgules)<input type="text" id="s-extrahol" value="${esc(st.extraHolidays||'')}" placeholder="Ex. : 02/11, 26/12"></label>
     </section>
     <section class="card">
@@ -1060,12 +1184,16 @@ function viewReglages(){
       <button class="btn" data-act="addShow">+ Ajouter une émission</button>
     </section>
     <section class="card">
+      <h2>Favoris</h2>
+      ${(st.favs||[]).length ? (st.favs||[]).map(f => { const c = catOf(f.cat), sh = showOf(f.show); return `<div class="itemrow" style="cursor:default"><span class="sw" style="--c:${esc((sh||c).color)}"></span><span>${esc(c.name)}${sh ? ' · '+esc(sh.name) : ''}${f.task ? ' · '+esc(f.task) : ''}${f.source==='direct' ? ' <span class="small muted">(hors planning)</span>' : ''}</span><button class="iconbtn" style="margin-left:auto;width:36px;height:36px" data-act="favDel" data-id="${esc(f.id)}" aria-label="Retirer ce favori">×</button></div>`; }).join('') : '<p class="small muted" style="margin:0">Aucun favori. Dans le formulaire d’une tâche, touche « Garder comme favori ».</p>'}
+    </section>
+    <section class="card">
       <h2>Apparence</h2>
       <div class="chips">${[['auto','Automatique'],['light','Clair'],['dark','Sombre']].map(([k,l]) => `<button class="pick" data-act="theme" data-t="${k}" aria-pressed="${st.theme===k}">${l}</button>`).join('')}</div>
     </section>
     <section class="card stack">
       <h2>Données</h2>
-      <p class="small muted" style="margin:0">${storage}<br>${S.entries.size} tâche${S.entries.size>1?'s':''} encodée${S.entries.size>1?'s':''}, ${fmt(presence(allEntries()))} de présence au total.</p>
+      <p class="small muted" style="margin:0">${storage}<br>${S.entries.size} tâche${S.entries.size>1?'s':''} encodée${S.entries.size>1?'s':''}, ${fmt(presence(allEntries()))} de présence au total.<br>Dernière sauvegarde : ${st.lastBackup ? esc(new Date(st.lastBackup).toLocaleDateString('fr',{day:'numeric',month:'long',year:'numeric'})) : 'jamais'}.</p>
       <div class="actions" style="margin-top:0">
         <button class="btn" data-act="exportAll">Tout exporter (CSV pour Excel)</button>
         <button class="btn" data-act="backup">Sauvegarde complète (JSON)</button>
@@ -1201,21 +1329,22 @@ async function saveFile(filename, text, mime){
   try{
     if(window.claude && typeof window.claude.use==='function'){
       const dl = await Promise.race([window.claude.use('downloads'), new Promise(r => setTimeout(() => r(null), 4000))]);
-      if(dl){ await dl.save({filename, data:text}); toast('Fichier prêt : '+filename); return; }
+      if(dl){ await dl.save({filename, data:text}); toast('Fichier prêt : '+filename); return true; }
     }
-  }catch(err){ if(err && (err.code==='declined')) return; if(err && err.code && err.code!=='not_granted' && err.code!=='capability_disabled' && err.code!=='capability_removed'){ toast('Téléchargement impossible ('+err.code+')'); return; } }
+  }catch(err){ if(err && (err.code==='declined')) return false; if(err && err.code && err.code!=='not_granted' && err.code!=='capability_disabled' && err.code!=='capability_removed'){ toast('Téléchargement impossible ('+err.code+')'); return false; } }
   const ua = navigator.userAgent || '';
   const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && (navigator.maxTouchPoints||0) > 1);
   if(ios && navigator.share && typeof File==='function'){
     try{
       const file = new File([text], filename, {type: mime.includes('csv') ? 'text/csv' : 'application/json'});
-      if(!navigator.canShare || navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; }
-    }catch(err){ if(err && err.name==='AbortError') return; }
+      if(!navigator.canShare || navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return true; }
+    }catch(err){ if(err && err.name==='AbortError') return false; }
   }
   try{
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text],{type:mime})); a.download = filename;
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  }catch(e){ toast('Le téléchargement n’est pas disponible ici.'); }
+    return true;
+  }catch(e){ toast('Le téléchargement n’est pas disponible ici.'); return false; }
 }
 /* ---------- Import CSV ---------- */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1542,7 +1671,32 @@ const ACT = {
   exportWeek: () => exportRange(weekStart, addDays(weekStart,6), 'semaine-'+weekStart+'.csv'),
   exportMonth: b => exportRange(b.dataset.from, b.dataset.to, 'mois-'+b.dataset.from.slice(0,7)+'.csv'),
   exportAll: () => { if(!S.entries.size){ toast('Rien à exporter pour l’instant.'); return; } saveFile('journal-complet-'+todayISO()+'.csv', toCSV(allEntries()), 'text/csv'); },
-  backup: () => saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries(), absences:allAbs()}, null, 1), 'application/json'),
+  backup: () => doBackup(),
+  dispoOn: () => { putAbs({id:'d'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:'absence', type:'dispo', date:curDate, span:'jour', minutes:0, remark:'', createdAt:new Date().toISOString()}); toast('Marqué disponible, rien demandé'); },
+  dispoOff: b => { removeAbs(b.dataset.id); },
+  favAdd: () => {
+    if(!editing) return; readForm();
+    const f = {cat:editing.cat, show:editing.show||'', source:editing.source||'planning', requestedBy:editing.source==='direct' ? (editing.requestedBy||'') : '', task:editing.task||''};
+    const favs = S.settings.favs = S.settings.favs || [];
+    if(favs.some(x => x.cat===f.cat && x.show===f.show && x.source===f.source && (x.task||'')===f.task)){ toast('Déjà dans tes favoris'); return; }
+    if(favs.length >= 10){ toast('10 favoris maximum : supprime-en un dans Réglages.'); return; }
+    favs.push({id:'f'+Date.now().toString(36), ...f}); putSettings(); toast('Ajouté aux favoris');
+  },
+  favUse: b => { const f = (S.settings.favs||[]).find(x => x.id===b.dataset.id); if(f) openForm(null, {date:curDate, cat:f.cat, show:f.show, source:f.source, requestedBy:f.requestedBy, task:f.task}); },
+  favDel: b => { S.settings.favs = (S.settings.favs||[]).filter(x => x.id!==b.dataset.id); putSettings(); toast('Favori retiré'); },
+  openShow: b => { emi.id = b.dataset.id; emi.year = +bilRange()[0].slice(0,4); location.hash = 'emission'; window.scrollTo(0,0); },
+  backBilan: () => { location.hash = 'bilan'; },
+  emiPrev: () => { emi.year--; render(); },
+  emiNext: () => { emi.year++; render(); },
+  emiExport: () => { const id = emi.id==='_none' ? '' : emi.id; const l = allEntries().filter(e => (e.show||'')===id && e.date.startsWith(emi.year+'-')); const n = (showOf(id)?.name || 'sans-emission').normalize('NFD').replace(/[^A-Za-z0-9]+/g,'-').toLowerCase(); saveFile(n+'-'+emi.year+'.csv', toCSV(l), 'text/csv'); },
+  summary: () => openSummary(),
+  sumClose: () => closeSummary(),
+  sumCopy: async () => {
+    const t = $('#sumtext');
+    try{ await navigator.clipboard.writeText(t.value); toast('Résumé copié'); return; }catch(e){}
+    try{ t.removeAttribute('readonly'); t.select(); t.setSelectionRange(0, t.value.length); const ok = document.execCommand('copy'); t.setAttribute('readonly',''); toast(ok ? 'Résumé copié' : 'Sélectionne le texte et copie-le'); }catch(e){ toast('Sélectionne le texte et copie-le'); }
+  },
+  sumShare: async () => { try{ await navigator.share({text:$('#sumtext').value}); }catch(e){} },
   import: () => $('#importfile').click(),
   reloadLatest: () => location.replace(location.pathname + '?v=' + Date.now()),
   csvImport: () => $('#csvfile').click(),
@@ -1559,6 +1713,7 @@ document.addEventListener('click', e => { const b = e.target.closest('[data-act]
 document.addEventListener('keydown', e => {
   if(e.key==='Escape' && $('#confirm').classList.contains('open')){ endConfirm(false); return; }
   if(e.key==='Escape' && $('#absdlg').classList.contains('open')){ closeAbs(); return; }
+  if(e.key==='Escape' && $('#sumdlg').classList.contains('open')){ closeSummary(); return; }
   if(e.key==='Escape' && $('#itemdlg').classList.contains('open')){ closeItem(); return; }
   if(e.key==='Enter' && e.target.id==='it-name'){ e.preventDefault(); ACT.itemSave(); return; }
   if(e.key==='Escape' && $('#sheet').classList.contains('open')){ closeForm(); return; }
@@ -1604,11 +1759,12 @@ $('#importfile').addEventListener('change', async e => {
       ['urgentMin','staleMin'].forEach(k => { if(Number.isFinite(+o.settings[k]) && +o.settings[k] > 0) S.settings[k] = +o.settings[k]; });
       if(Array.isArray(o.settings.workdays)) S.settings.workdays = o.settings.workdays.map(Number).filter(n => n>=1 && n<=7);
       if(['auto','light','dark'].includes(o.settings.theme)) S.settings.theme = o.settings.theme;
+      if(Array.isArray(o.settings.favs)) S.settings.favs = o.settings.favs.filter(f => f && f.id && f.cat).slice(0,10);
       await putSettings();
     }
     for(const x of ok){ await putEntry({id: String(x.id || uid()), date:x.date, start:x.start, end:x.end, pause:+x.pause||0, cat:String(x.cat||''), show:String(x.show||''), project:String(x.project||''), source:String(x.source||''), requestedBy:String(x.requestedBy||''), askedAt:String(x.askedAt||''), task:String(x.task||''), abroad:!!x.abroad, exceptional:!!x.exceptional, status:STATUSES.some(s => s.id===x.status) ? x.status : 'fait', remark:String(x.remark||''), createdAt:x.createdAt||new Date().toISOString(), updatedAt:x.updatedAt||new Date().toISOString()}); }
     const okA = Array.isArray(o.absences) ? o.absences.filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.date||'')) : [];
-    for(const a of okA){ await putAbs({id:String(a.id), kind:'absence', date:a.date, type:ABS_TYPES.some(x => x.id===a.type) ? a.type : 'autre', span:a.span==='demi' ? 'demi' : 'jour', minutes:+a.minutes||0, remark:String(a.remark||''), createdAt:a.createdAt||new Date().toISOString()}); }
+    for(const a of okA){ await putAbs({id:String(a.id), kind:'absence', date:a.date, type:(a.type==='dispo' || ABS_TYPES.some(x => x.id===a.type)) ? a.type : 'autre', span:a.span==='demi' ? 'demi' : 'jour', minutes:+a.minutes||0, remark:String(a.remark||''), createdAt:a.createdAt||new Date().toISOString()}); }
     toast(ok.length+' tâche(s)'+(okA.length ? ' et '+okA.length+' absence(s)' : '')+' restaurée(s)');
   }catch(err){ toast('Ce fichier n’est pas une sauvegarde valide du journal.'); }
 });
