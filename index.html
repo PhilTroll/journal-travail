@@ -297,6 +297,8 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
 
 .toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:30;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
+.toast.act{pointer-events:auto;display:flex;align-items:center;gap:14px;text-align:left}
+.toast .undo{background:#F59E0B;color:#1B1405;border:0;border-radius:9px;padding:8px 12px;font-weight:700;min-height:38px;white-space:nowrap}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 @media (max-width:420px){.big{font-size:2.2rem}.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3 .field:last-child{grid-column:1/-1}}
 </style>
@@ -1629,7 +1631,7 @@ const ACT = {
     for(const d of r.planned){ await putAbs({...base, id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,7), date:d}); }
     toast(`${r.planned.length} jour${r.planned.length>1?'s':''} d’absence encodé${r.planned.length>1?'s':''}`);
   },
-  absDelete: async () => { if(!absEd || !absEd.id) return; if(!(await askConfirm('Supprimer cette absence ?', 'Supprimer'))) return; const id = absEd.id; closeAbs(); removeAbs(id); toast('Absence supprimée'); },
+  absDelete: () => { if(!absEd || !absEd.id) return; const id = absEd.id, old = S.absences.get(id); closeAbs(); removeAbs(id); toastUndo('Absence supprimée', () => { if(old) putAbs(clone(old)); }); },
   bilKind: b => { bil.kind = b.dataset.k; render(); },
   bilPrev: () => { bilShift(-1); render(); },
   bilNext: () => { bilShift(1); render(); },
@@ -1655,12 +1657,12 @@ const ACT = {
     const used = allEntries().filter(e => (isCat ? e.cat : e.show)===id).length;
     const ok = await askConfirm(used ? `${used} tâche${used>1?'s':''} ${used>1?'sont liées':'est liée'} ${isCat ? 'à ce métier' : 'à cette émission'}. Elle${used>1?'s':''} passer${used>1?'ont':'a'} en « ${isCat ? 'Sans catégorie' : 'Sans émission'} ». Supprimer quand même ?` : (isCat ? 'Supprimer ce métier ?' : 'Supprimer cette émission ?'), 'Supprimer');
     if(!ok) return;
-    S.settings[kind] = S.settings[kind].filter(x => x.id!==id); closeItem(); putSettings(); toast('Supprimé');
+    const before = clone(S.settings[kind]); S.settings[kind] = before.filter(x => x.id!==id); closeItem(); putSettings(); toastUndo('Supprimé', () => { S.settings[kind] = before; putSettings(); });
   },
   new: () => openForm(null, {date: view==='jour' ? curDate : todayISO()}),
   edit: b => { const e = S.entries.get(b.dataset.id); if(e) openForm(e); },
   closeForm, save: saveForm,
-  delete: async () => { if(!editing || !editing.id) return; if(!(await askConfirm('Supprimer cette tâche ? Cette action est définitive.', 'Supprimer'))) return; const id = editing.id; closeForm(); removeEntry(id); toast('Tâche supprimée'); },
+  delete: () => { if(!editing || !editing.id) return; const id = editing.id, old = S.entries.get(id); closeForm(); removeEntry(id); toastUndo('Tâche supprimée', () => { if(old) putEntry(clone(old)); }); },
   duplicate: () => { if(!editing) return; readForm(); const src = clone(editing); closeForm(); openForm(null, {date:todayISO(), cat:src.cat, show:src.show||'', task:src.task, source:src.source, requestedBy:src.requestedBy}); },
   endNow: () => { $('#f-end').value = nowHM(); updateFormDur(); },
   fCat: b => { editing.cat = b.dataset.id; drawFormChips(); },
@@ -1704,7 +1706,7 @@ const ACT = {
   exportAll: () => { if(!S.entries.size){ toast('Rien à exporter pour l’instant.'); return; } saveFile('journal-complet-'+todayISO()+'.csv', toCSV(allEntries()), 'text/csv'); },
   backup: () => doBackup(),
   dispoOn: () => { putAbs({id:'d'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:'absence', type:'dispo', date:curDate, span:'jour', minutes:0, remark:'', createdAt:new Date().toISOString()}); toast('Marqué disponible, rien demandé'); },
-  dispoOff: b => { removeAbs(b.dataset.id); },
+  dispoOff: b => { const old = S.absences.get(b.dataset.id); removeAbs(b.dataset.id); toastUndo('Marque « disponible » retirée', () => { if(old) putAbs(clone(old)); }); },
   favAdd: () => {
     if(!editing) return; readForm();
     const f = {cat:editing.cat, show:editing.show||'', source:editing.source||'planning', requestedBy:editing.source==='direct' ? (editing.requestedBy||'') : '', task:editing.task||''};
@@ -1714,7 +1716,7 @@ const ACT = {
     favs.push({id:'f'+Date.now().toString(36), ...f}); putSettings(); toast('Ajouté aux favoris');
   },
   favUse: b => { const f = (S.settings.favs||[]).find(x => x.id===b.dataset.id); if(f) openForm(null, {date:curDate, cat:f.cat, show:f.show, source:f.source, requestedBy:f.requestedBy, task:f.task}); },
-  favDel: b => { S.settings.favs = (S.settings.favs||[]).filter(x => x.id!==b.dataset.id); putSettings(); toast('Favori retiré'); },
+  favDel: b => { const before = clone(S.settings.favs||[]); S.settings.favs = before.filter(x => x.id!==b.dataset.id); putSettings(); toastUndo('Favori retiré', () => { S.settings.favs = before; putSettings(); }); },
   openShow: b => { emi.id = b.dataset.id; emi.year = +bilRange()[0].slice(0,4); location.hash = 'emission'; window.scrollTo(0,0); },
   backBilan: () => { location.hash = 'bilan'; },
   emiPrev: () => { emi.year--; render(); },
@@ -1801,11 +1803,23 @@ $('#importfile').addEventListener('change', async e => {
 });
 
 let toastT;
-function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2800); }
+function toast(msg){ const t = $('#toast'); t.classList.remove('act'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2800); }
+// Message avec bouton « Annuler » pendant 7 secondes
+function toastUndo(msg, undo){
+  const t = $('#toast'); t.innerHTML = ''; t.classList.add('act','show');
+  const sp = document.createElement('span'); sp.textContent = msg;
+  const b = document.createElement('button'); b.className = 'undo'; b.type = 'button'; b.textContent = 'Annuler';
+  b.onclick = () => { clearTimeout(toastT); t.classList.remove('show','act'); undo(); setTimeout(() => toast('Restauré'), 50); };
+  t.append(sp, b); clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show','act'), 7000);
+}
 
 window.addEventListener('hashchange', () => { readHash(); render(); window.scrollTo(0,0); });
 readHash();
 boot();
+// Version GitHub : fonctionnement hors ligne
+if('serviceWorker' in navigator && location.protocol==='https:'){ navigator.serviceWorker.register('sw.js').catch(() => {}); }
+window.addEventListener('offline', () => toast('Hors ligne : l’app continue de fonctionner, tout est enregistré sur ce téléphone.'));
 </script>
 </body>
 </html>
