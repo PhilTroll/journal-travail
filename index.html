@@ -210,6 +210,23 @@ input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and
 .delta.up{color:var(--ok)} .delta.down{color:var(--warn)} .delta.new{color:var(--accent)}
 .tbl.em tr.nm{cursor:pointer}
 .tbl.em tr.nm td .go{color:var(--muted);font-size:.8rem;margin-left:4px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal .h{font-size:.66rem;color:var(--muted);text-align:center;font-weight:600}
+.cal .d{position:relative;aspect-ratio:1;border-radius:8px;border:0;padding:0;background:var(--lv);color:var(--ink);font-size:.72rem;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;cursor:pointer;font-variant-numeric:tabular-nums}
+.cal .d small{font-size:.58rem;font-weight:500;opacity:.85}
+.cal .d.off{opacity:.45}
+.cal .d.fut{opacity:.4;background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.cal .d.hol{box-shadow:inset 0 0 0 1.5px var(--warn)}
+.cal .d.abs{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ok) 28%,var(--surface2)) 0 4px,var(--surface2) 4px 8px)}
+.cal .d.miss{box-shadow:inset 0 0 0 1.5px var(--bad)}
+.cal .d.today{outline:2px solid var(--ink);outline-offset:1px}
+.cal .d.dark{color:#1B1405}
+.cal .d .mk{position:absolute;top:2px;right:4px;font-size:.6rem}
+.calmonth+.calmonth{margin-top:16px}
+.calmonth h3{margin:0 0 6px;font-size:.9rem;font-weight:650}
+.calmonth h3::first-letter{text-transform:uppercase}
+.callegend{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:12px;font-size:.72rem;color:var(--muted);align-items:center}
+.callegend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-3px;margin-right:4px}
 .mbar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:4px}
 .mbar span{display:block;height:100%;background:var(--c)}
 #sumtext{width:100%;min-height:240px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--surface2);color:var(--ink);font:inherit;font-size:.88rem;line-height:1.45}
@@ -1013,6 +1030,38 @@ function bilShift(n){
   bil.anchor = toISO(a);
 }
 function daysBetween(f, t){ const out = []; for(let d = f; d <= t; d = addDays(d,1)) out.push(d); return out; }
+/* ---------- Calendrier de charge ---------- */
+const CAL_LV = [[0,'14'],[120,'22'],[240,'45'],[360,'70'],[480,'100']]; // minutes → intensité de jaune (%)
+function calLevel(m){ if(!m) return -1; let i = 0; CAL_LV.forEach(([t],k) => { if(m >= t) i = k; }); return i; }
+function calMonth(y, mo, td){
+  const first = toISO(new Date(y, mo, 1)), last = toISO(new Date(y, mo+1, 0));
+  const pad0 = (isoWeekday(first)+6)%7;
+  let h = ['L','M','M','J','V','S','D'].map(x => `<span class="h">${x}</span>`).join('') + '<span></span>'.repeat(pad0);
+  for(let d = first; d <= last; d = addDays(d,1)){
+    const l = entriesOn(d), m = presence(l), lv = calLevel(m), pct = lv<0 ? 0 : +CAL_LV[lv][1];
+    const work = isWorkday(d) && !isHoliday(d), abs = absReal(d).length && !l.length, past = d <= td;
+    const miss = work && past && !l.length && !absReal(d).length && !dispoOf(d) && workValue(d) > 0;
+    const cls = ['d', !work && !l.length ? 'off' : '', isWeekHoliday(d) ? 'hol' : '', abs ? 'abs' : '', miss ? 'miss' : '', d===td ? 'today' : '', d > td ? 'fut' : '', pct >= 70 ? 'dark' : ''].filter(Boolean).join(' ');
+    const bg = pct ? `color-mix(in srgb,#F59E0B ${pct}%,var(--surface2))` : 'var(--surface2)';
+    const mk = isDispo(d) ? '○' : '';
+    const tip = `${dayLong(d)} : ${m ? fmt(m) : 'aucune heure'}${isWeekHoliday(d) ? ' · férié' : ''}${abs ? ' · '+absType(absReal(d)[0].type).label : ''}${isDispo(d) ? ' · disponible' : ''}${miss ? ' · non encodé' : ''}`;
+    h += `<button class="${cls}" style="--lv:${bg}" data-act="gotoDay" data-date="${d}" title="${esc(tip)}" aria-label="${esc(tip)}">${+d.slice(8)}${m ? `<small>${fmtC(m)}</small>` : ''}${mk ? `<span class="mk">${mk}</span>` : ''}</button>`;
+  }
+  return `<div class="calmonth"><h3>${esc(new Date(y, mo, 1).toLocaleDateString('fr',{month:'long',year:'numeric'}))}</h3><div class="cal">${h}</div></div>`;
+}
+function calSection(from, to){
+  const td = todayISO(), months = [];
+  let y = +from.slice(0,4), mo = +from.slice(5,7)-1;
+  const ey = +to.slice(0,4), em = +to.slice(5,7)-1;
+  while(y < ey || (y===ey && mo <= em)){ months.push([y,mo]); mo++; if(mo>11){ mo=0; y++; } }
+  // Sur l’année, les mois à venir sont inutiles : on s’arrête au mois en cours
+  const shown = months.filter(([yy,mm]) => toISO(new Date(yy,mm,1)) <= td || months.length <= 3);
+  const lv = CAL_LV.map(([t,p],i) => `<span><i style="background:${+p ? `color-mix(in srgb,#F59E0B ${p}%,var(--surface2))` : 'var(--surface2)'}"></i>${i===0 ? 'moins de 2h' : i===CAL_LV.length-1 ? '8h et +' : `${t/60}h–${CAL_LV[i+1][0]/60}h`}</span>`).join('');
+  return `<section class="card"><h2>Calendrier de charge</h2>
+    ${(shown.length ? shown : months).slice().reverse().map(([yy,mm]) => calMonth(yy, mm, td)).join('')}
+    <div class="callegend">${lv}<span><i style="box-shadow:inset 0 0 0 1.5px var(--warn)"></i>férié</span><span><i style="background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ok) 28%,var(--surface2)) 0 3px,var(--surface2) 3px 6px)"></i>congé</span><span><i style="box-shadow:inset 0 0 0 1.5px var(--bad)"></i>non encodé</span><span>○ disponible</span></div>
+    <p class="note">Une case vide sans couleur en semaine : aucune heure. Touche un jour pour l’ouvrir.</p></section>`;
+}
 function viewBilan(){
   const [from, to, label] = bilRange(), td = todayISO();
   const end = to < td ? to : td, started = from <= td;
@@ -1047,6 +1096,7 @@ function viewBilan(){
       <button class="iconbtn" data-act="bilNext" aria-label="Période suivante">›</button>
     </section>
     ${started ? `<button class="btn block" data-act="summary">Résumé à partager</button>` : ''}
+    ${calSection(bil.kind==='semaine' ? mondayOf(from).slice(0,8)+'01' : from, to)}
 
     <section class="card">
       <h2>Heures par émission</h2>
