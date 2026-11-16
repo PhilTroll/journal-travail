@@ -70,7 +70,9 @@ header.top{
 .timerbar .tb-go{margin-left:auto;background:rgba(255,255,255,.22);border-radius:9px;padding:6px 10px;font-size:.85rem;white-space:nowrap}
 .timerbar .pulse{background:#fff}
 #stale .panel{border-top:6px solid var(--bad)}
-header.top h1{font-size:1.15rem;margin:0;font-weight:700;letter-spacing:-.01em}
+header.top h1{margin:0;width:50px;display:flex;flex-direction:column;align-items:center;gap:3px}
+header.top h1 svg{display:block;width:50px;height:50px;border-radius:12px;box-shadow:0 0 0 1px var(--line)}
+header.top h1 span{display:block;width:50px;font-size:9px;line-height:1.15;font-weight:700;text-align:center;letter-spacing:0;overflow-wrap:break-word;color:var(--ink)}
 .sync{margin-left:auto;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
 .sync.ok i{background:var(--ok)} .sync.warn i{background:var(--warn)} .sync.bad i{background:var(--bad)}
@@ -305,7 +307,7 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
 </head>
 <body>
 <header class="top">
-  <h1>Journal de travail</h1>
+  <h1><svg viewBox="0 0 720 720" aria-hidden="true"><rect width="720" height="720" rx="160" fill="#172033"/><rect x="120" y="150" width="210" height="80" rx="22" fill="#7C4DFF"/><rect x="360" y="150" width="200" height="80" rx="22" fill="#0EA5A0"/><rect x="170" y="275" width="230" height="80" rx="22" fill="#F59E0B"/><rect x="430" y="275" width="170" height="80" rx="22" fill="#E2457A"/><rect x="120" y="400" width="130" height="80" rx="22" fill="#2F5BEA"/><rect x="280" y="400" width="240" height="80" rx="22" fill="#16A34A"/><rect x="200" y="525" width="270" height="80" rx="22" fill="#E05D2A"/><rect x="383" y="95" width="14" height="545" fill="#FFFFFF"/><polygon points="350,80 430,80 390,130" fill="#FFFFFF"/></svg><span>Journal de travail</span></h1>
   <div class="sync" id="sync"><i></i><span>Chargement…</span></div>
   <button class="timerbar" id="timerbar" data-act="stopTimer" hidden aria-live="off">
     <span class="pulse" aria-hidden="true"></span>
