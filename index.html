@@ -176,15 +176,16 @@ mark{background:color-mix(in srgb,var(--warn) 35%,transparent);color:inherit;bor
 input[type=time],input[type=date],input[type=datetime-local]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;width:100%;box-sizing:border-box}
 input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and-time-value,input[type=datetime-local]::-webkit-date-and-time-value{text-align:left;margin:0}
 .field textarea{min-height:84px;resize:vertical}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid2>*,.grid3>*{min-width:0}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .search-input{position:relative}
 .search-input input{padding-left:38px}
 .search-input::before{content:"🔍";position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:.95rem;z-index:1}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .pick{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:7px 12px;font-size:.88rem;font-weight:550;min-height:38px;display:inline-flex;align-items:center;gap:7px}
 .pick .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
-.pick[aria-pressed="true"]{border-color:var(--c,var(--accent));background:color-mix(in srgb,var(--c,var(--accent)) 18%,var(--surface));box-shadow:inset 0 0 0 1px var(--c,var(--accent))}
+.pick[aria-pressed="true"]{border-color:var(--c,#F59E0B);background:color-mix(in srgb,var(--c,#F59E0B) 20%,var(--surface));box-shadow:inset 0 0 0 1px var(--c,#F59E0B)}
 .check{display:flex;align-items:center;gap:8px;font-size:.92rem;min-height:40px}
 .check input{width:20px;height:20px;accent-color:var(--accent)}
 .daygroup h3{font-size:.9rem;margin:18px 0 8px;display:flex;justify-content:space-between;text-transform:capitalize;color:var(--muted);font-weight:600}
@@ -225,7 +226,9 @@ input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and
 .tbl.em tr.tot td{font-size:.85rem}
 .tbl.em tr.vals.tot td.r{font-size:.8rem}
 .tbl.em .chip{font-size:.78rem;padding:2px 8px;gap:5px}
-.tbl.em .det{display:inline;margin-left:4px;font-size:.72rem;line-height:1.3}
+.tbl.em .det{display:block;margin-top:4px;font-size:.74rem;line-height:1.3}
+.tbl.em .lbl{display:block;font-size:.64rem;font-weight:500;color:var(--muted);line-height:1.2;margin-bottom:1px}
+.tbl.em tr.vals td{padding-top:4px}
 .brk b{white-space:nowrap;font-size:.85rem}
 /* Petits écrans : tout un peu plus compact */
 @media (max-width:400px){
@@ -295,7 +298,7 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
 .toast{position:fixed;left:50%;bottom:calc(150px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:.9rem;z-index:30;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center}
 .toast.show{opacity:1}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-@media (max-width:420px){.big{font-size:2.2rem}.grid3{grid-template-columns:1fr 1fr}.grid3 .field:last-child{grid-column:1/-1}}
+@media (max-width:420px){.big{font-size:2.2rem}.grid3{grid-template-columns:repeat(2,minmax(0,1fr))}.grid3 .field:last-child{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -891,7 +894,7 @@ function viewSemaine(){
       <div class="kpis">
         <div class="kpi"><b class="num">${fmtC(mCharge)}</b><span>charge</span></div>
         <div class="kpi"><b class="num" style="color:var(--accent)">${fmtC(simultMin(mEntries))}</b><span>en simultané</span></div>
-        <div class="kpi"><b class="num" style="color:var(--warn)">${mCharge ? Math.round(mHors/mCharge*100) : 0} %</b><span>hors planning</span></div>
+        <div class="kpi"><b class="num" style="color:var(--warn)">${mCharge ? Math.round(mHors/mCharge*100) : 0} %</b><span>demandes hors planning</span></div>
       </div>
       <div class="actions"><button class="btn" data-act="exportWeek">Exporter la semaine (CSV)</button><button class="btn" data-act="exportMonth" data-from="${mStart}" data-to="${mEnd}">Exporter le mois (CSV)</button></div>
     </section>
@@ -906,7 +909,7 @@ function orgSection(all, charge, sim, label){
   const line = (l, v) => `<div class="org-line"><span>${l}</span><b class="num">${v}</b></div>`;
   return `<section class="card"><h2>Organisation ${label}</h2>
     ${line('Via le planning', `${fmt(sumMin(plan))} · ${pc(plan)} %`)}
-    ${line('<span style="color:var(--warn)">Demandes directes, hors planning</span>', `${hors.length} · ${fmt(sumMin(hors))} · ${pc(hors)} %`)}
+    ${line('<span style="color:var(--warn)">Demandes hors planning</span>', `${hors.length} · ${fmt(sumMin(hors))} · ${pc(hors)} %`)}
     ${line('Mon initiative', `${fmt(sumMin(ini))} · ${pc(ini)} %`)}
     ${nd.length ? line('<span class="muted">Origine non précisée</span>', `${nd.length} tâche${nd.length>1?'s':''}`) : ''}
     ${line('<span style="color:var(--accent)">Temps en simultané</span>', fmt(sim))}
@@ -1027,8 +1030,8 @@ function viewBilan(){
   const showRows = Object.entries(byShow).sort((a,b) => b[1].m - a[1].m).map(([k,v]) => {
     const sh = showOf(k), nm = sh ? sh.name : 'Sans émission', col = sh ? sh.color : '#94A3B8';
     const det = Object.entries(v.by).sort((x,y) => y[1]-x[1]).map(([cc,m]) => esc(catOf(cc).name)+' '+fmtC(m)).join(', ');
-    return `<tr class="nm" data-act="openShow" data-id="${k ? esc(k) : '_none'}"><td colspan="${yearly?4:3}"><span class="chip" style="--c:${esc(col)}"><span class="dot"></span>${esc(nm)}</span>${delta(curDone[k]||0, prevBy[k]||0)} <span class="det muted">${det} · ${v.days.size} j</span><span class="go">›</span></td></tr>
-      <tr class="vals"><td class="r"><b>${fmtC(v.m)}</b></td><td class="r">${weeks>=1 ? fmtC(v.m/weeks) : '–'}</td>${yearly ? `<td class="r">${elapsedDays>=28 ? fmtC(v.m/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r">${charge ? Math.round(v.m/charge*100) : 0} %</td></tr>`;
+    return `<tr class="nm" data-act="openShow" data-id="${k ? esc(k) : '_none'}"><td colspan="${yearly?4:3}"><span class="chip" style="--c:${esc(col)}"><span class="dot"></span>${esc(nm)}</span>${delta(curDone[k]||0, prevBy[k]||0)}<span class="go">›</span><span class="det muted">${det} · ${v.days.size} j</span></td></tr>
+      <tr class="vals"><td class="r"><span class="lbl">Total</span><b>${fmtC(v.m)}</b></td><td class="r"><span class="lbl">Par semaine</span>${weeks>=1 ? fmtC(v.m/weeks) : '–'}</td>${yearly ? `<td class="r"><span class="lbl">Par mois</span>${elapsedDays>=28 ? fmtC(v.m/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r"><span class="lbl">Part</span>${charge ? Math.round(v.m/charge*100) : 0} %</td></tr>`;
   }).join('');
   const abs = ABS_TYPES.filter(t => c.absBy[t.id]);
   const kinds = [['semaine','Semaine'],['mois','Mois'],['trimestre','Trimestre'],['annee','Année']];
@@ -1043,9 +1046,9 @@ function viewBilan(){
 
     <section class="card">
       <h2>Heures par émission</h2>
-      ${showRows ? `<div class="tblwrap"><table class="tbl em"><thead><tr><th class="r">Total</th><th class="r">/ sem.</th>${yearly ? '<th class="r">/ mois</th>' : ''}<th class="r pc">Part</th></tr></thead><tbody>${showRows}
+      ${showRows ? `<div class="tblwrap"><table class="tbl em"><tbody>${showRows}
         <tr class="nm tot"><td colspan="${yearly?4:3}">Total, toutes émissions${delta(sumMin(list.filter(e => e.date<=end)), prevTotal)}</td></tr>
-        <tr class="vals tot"><td class="r">${fmtC(charge)}</td><td class="r">${weeks>=1 ? fmtC(charge/weeks) : '–'}</td>${yearly ? `<td class="r">${elapsedDays>=28 ? fmtC(charge/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r">100 %</td></tr></tbody></table></div>
+        <tr class="vals tot"><td class="r"><span class="lbl">Total</span>${fmtC(charge)}</td><td class="r"><span class="lbl">Par semaine</span>${weeks>=1 ? fmtC(charge/weeks) : '–'}</td>${yearly ? `<td class="r"><span class="lbl">Par mois</span>${elapsedDays>=28 ? fmtC(charge/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r"><span class="lbl">Part</span>100 %</td></tr></tbody></table></div>
       <p class="note">Moyennes calculées sur la partie écoulée de la période${weeks<1 ? ', trop courte ici pour une moyenne par semaine' : ''}. Les tâches simultanées comptent chacune pour leur émission. ▲▼ : écart avec la même portion de la période précédente. Touche une émission pour voir sa fiche.</p>` : '<p class="muted small">Aucune tâche sur cette période.</p>'}
     </section>
 
@@ -1078,6 +1081,26 @@ function viewBilan(){
   </div>`;
 }
 
+/* ---------- Sessions : jours d’une même émission regroupés ----------
+   Une session continue tant qu’il n’y a pas 2 jours de semaine (fériés compris) sans cette émission.
+   Ex. : vendredi → lundi → mardi = une seule session ; mardi puis vendredi suivant = deux sessions. */
+function sessionsOf(list){
+  const by = {}; list.forEach(e => (by[e.date] = by[e.date] || []).push(e));
+  const days = Object.keys(by).sort(), out = [];
+  let cur = null;
+  for(const d of days){
+    if(cur){
+      let gap = 0; for(let x = addDays(cur.end,1); x < d; x = addDays(x,1)) if(isWorkday(x)) gap++;
+      if(gap >= 2){ out.push(cur); cur = null; }
+    }
+    if(!cur) cur = {start:d, end:d, days:[], m:0};
+    cur.end = d; cur.days.push(d); cur.m += sumMin(by[d]);
+  }
+  if(cur) out.push(cur);
+  return out;
+}
+const shortDay = d => parseISO(d).toLocaleDateString('fr',{weekday:'short',day:'numeric',month:'short'});
+
 /* ---------- Fiche d’une émission ---------- */
 const emi = {id:'', year:new Date().getFullYear()};
 function viewEmission(){
@@ -1104,6 +1127,12 @@ function viewEmission(){
         <div class="kpi"><b class="num">${elapsedMonths ? fmtC(total/elapsedMonths) : '–'}</b><span>par mois</span></div>
       </div>
     </section>
+    ${(() => { const ss = sessionsOf(list); if(!ss.length) return '';
+      const avg = ss.reduce((t,x) => t+x.m, 0)/ss.length, mx = Math.max(...ss.map(x => x.m)), recent = ss.slice().reverse();
+      return `<section class="card"><h2>Sessions de travail (${ss.length})</h2>
+        <div class="kpis"><div class="kpi"><b class="num">${fmtC(avg)}</b><span>en moyenne par session</span></div><div class="kpi"><b class="num">${fmtC(mx)}</b><span>la plus longue</span></div><div class="kpi"><b class="num">${fmtC(recent[0].m)}</b><span>la dernière</span></div></div>
+        <div class="tblwrap" style="margin-top:10px"><table class="tbl"><tbody>${recent.slice(0,30).map(x => `<tr><td>${esc(shortDay(x.start))}${x.end!==x.start ? ' → '+esc(shortDay(x.end)) : ''}<div class="small muted">${x.days.length} jour${x.days.length>1?'s':''} travaillé${x.days.length>1?'s':''}</div></td><td class="r"><b>${fmtC(x.m)}</b></td></tr>`).join('')}</tbody></table></div>
+        <p class="note">Une session regroupe les jours consécutifs de travail sur cette émission. Le week-end ne la coupe pas ; deux jours de semaine sans cette émission (fériés compris) en démarrent une nouvelle.</p></section>`; })()}
     <section class="card">
       <h2>Mois par mois</h2>
       ${total ? `<div class="tblwrap"><table class="tbl"><tbody>${months.map(x => `<tr style="${x.m ? '' : 'opacity:.45'}"><td style="width:5.5em">${esc(new Date(y, x.i, 1).toLocaleDateString('fr',{month:'short'}))}</td><td style="width:100%"><div class="mbar" style="--c:${esc(col)}"><span style="width:${(x.m/max*100).toFixed(1)}%"></span></div></td><td class="r"><b>${x.m ? fmtC(x.m) : '–'}</b></td><td class="r">${x.d ? x.d+' j' : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted small">Aucune tâche pour cette émission cette année.</p>'}
@@ -1145,10 +1174,12 @@ function closeSummary(){ const m = $('#sumdlg'); m.classList.remove('open'); m.s
 /* ---------- Rappel de sauvegarde ---------- */
 function daysSinceBackup(){ const l = S.settings.lastBackup; return l ? Math.floor((Date.now() - new Date(l).getTime())/864e5) : null; }
 function backupBanner(){
-  if(S.mode==='db' || S.mode==='loading' || !S.entries.size) return '';
+  if(S.mode==='loading' || !S.entries.size) return '';
   const n = daysSinceBackup();
   if(n!=null && n < 7) return '';
-  return `<section class="card backup"><p><b>${n==null ? 'Aucune sauvegarde encore faite.' : `Dernière sauvegarde il y a ${n} jour${n>1?'s':''}.`}</b> Tes données ne sont que sur ce téléphone : enregistre une copie dans Fichiers ou iCloud.</p><button class="btn primary" data-act="backup">Sauvegarder maintenant</button></section>`;
+  const last = S.settings.lastBackup ? new Date(S.settings.lastBackup).toLocaleDateString('fr',{weekday:'long',day:'numeric',month:'long'}) : '';
+  const where = S.mode==='db' ? 'Tes données sont synchronisées sur ton compte, mais une copie à toi reste la meilleure protection.' : 'Tes données ne sont que sur ce téléphone : enregistre une copie dans Fichiers ou iCloud.';
+  return `<section class="card backup"><p><b>${n==null ? 'Aucune sauvegarde encore faite.' : `Dernière sauvegarde : ${esc(last)}, il y a ${n} jour${n>1?'s':''}.`}</b> ${where}</p><button class="btn primary" data-act="backup">Sauvegarder maintenant</button></section>`;
 }
 async function doBackup(){
   const ok = await saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries(), absences:allAbs()}, null, 1), 'application/json');
