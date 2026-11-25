@@ -263,7 +263,21 @@ input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and
 .seg .pick{flex:1;justify-content:center;padding:6px 4px;font-size:.82rem;min-height:36px}
 .note{font-size:.8rem;color:var(--muted);margin:8px 0 0}
 .chip.flag{--c:var(--accent)}
-#absdlg{z-index:30}
+#absdlg{z-index:30} #incdlg{z-index:30}
+.dysfbox{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:var(--surface2)}
+.dysfbox.on{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--surface))}
+.dysfbox .check{min-height:36px;font-weight:600;color:var(--ink)}
+.dysfbox .chips{margin-top:6px}
+.chip.dysf{--c:var(--bad);font-weight:650}
+.incrow{display:flex;align-items:flex-start;gap:10px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-left:6px solid var(--bad);border-radius:14px;padding:10px 12px;cursor:pointer;color:var(--ink)}
+.incrow b{display:block;font-size:.9rem}
+.incrow .t{font-size:.85rem;white-space:pre-wrap;word-break:break-word;margin-top:2px}
+.dlist{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.dlist .incrow .when{font-size:.75rem;color:var(--muted)}
+.dtype{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;padding:5px 0}
+.dtype .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.dtype .bar span{display:block;height:100%;background:var(--bad)}
+.btn.warnline{border-color:color-mix(in srgb,var(--bad) 45%,var(--line));color:var(--bad)}
 .imp-sum{background:var(--surface2);border-radius:12px;padding:12px;font-size:.92rem}
 .imp-sum b{font-size:1.05rem}
 .imp-err{max-height:180px;overflow:auto;font-size:.82rem;color:var(--muted);margin:6px 0 0;padding-left:18px}
@@ -375,6 +389,7 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
       </div>
       <div id="f-lead" class="small"></div>
       <div class="field">Statut<div class="chips" id="f-status"></div></div>
+      <div class="dysfbox" id="f-dysfbox"><label class="check"><input type="checkbox" id="f-dysf">⚠ Dysfonctionnement : lister cette remarque dans le Bilan</label><div class="chips" id="f-dysftypes"></div></div>
       <label class="field">Remarque<textarea id="f-remark" placeholder="Ce qui a bloqué, ce qu’il reste à faire, une info à retenir…"></textarea></label>
     </div>
     <div class="actions">
@@ -434,6 +449,27 @@ nav.tabs a[aria-current="page"]{color:var(--accent);background:var(--accent-soft
       <button class="btn" id="cf-ok" data-act="confirmYes">Confirmer</button>
       <button class="btn ghost" data-act="confirmNo">Annuler</button>
     </div>
+  </div>
+</div>
+<div class="sheet" id="incdlg" aria-hidden="true">
+  <div class="backdrop" data-act="incClose"></div>
+  <div class="panel" role="dialog" aria-modal="true" aria-labelledby="in-title">
+    <div class="grab"></div>
+    <h2 id="in-title">Signaler un dysfonctionnement</h2>
+    <div class="stack">
+      <div class="grid2">
+        <label class="field">Date<input type="date" id="in-date"></label>
+        <label class="field">Heure (facultatif)<input type="time" id="in-time"></label>
+      </div>
+      <div class="field">Type<div class="chips" id="in-types"></div></div>
+      <label class="field">Ce qui s’est passé<textarea id="in-text" placeholder="Les faits : quoi, quand, qui a demandé, ce qui a été bloqué…"></textarea></label>
+      <div id="in-err" class="warnbox"></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" data-act="incSave">Enregistrer</button>
+      <button class="btn ghost" data-act="incClose">Annuler</button>
+    </div>
+    <div class="actions" id="in-extra"><button class="btn danger" data-act="incDelete">Supprimer</button></div>
   </div>
 </div>
 <div class="sheet" id="absdlg" aria-hidden="true">
@@ -552,11 +588,11 @@ function migrateEntry(e){
 }
 
 /* ---------- État ---------- */
-const S = { absences:new Map(), entries:new Map(), settings:clone(DEFAULT_SETTINGS), mode:'loading', col:null };
+const S = { incidents:new Map(), absences:new Map(), entries:new Map(), settings:clone(DEFAULT_SETTINGS), mode:'loading', col:null };
 let view = 'jour';
 let curDate = todayISO();
 let weekStart = mondayOf(todayISO());
-const Q = { text:'', from:'', to:'', cat:'', show:'', source:'', status:'', remark:false, urgent:false, range:'all' };
+const Q = { text:'', from:'', to:'', cat:'', show:'', source:'', status:'', remark:false, urgent:false, dysf:false, range:'all' };
 let editing = null; // brouillon de la feuille
 let editingFromTimer = false;
 
@@ -588,6 +624,23 @@ const ABS_TYPES = [
 const absType = id => ABS_TYPES.find(x => x.id===id) || ABS_TYPES[3];
 const allAbs = () => [...(S.absences||new Map()).values()];
 const absOn = d => allAbs().filter(a => a.date===d);
+const DYSF_TYPES = [
+  {id:'impossible', label:'Travail prévu impossible'},
+  {id:'manquant', label:'Élément manquant'},
+  {id:'planning', label:'Planning erroné'},
+  {id:'collegue', label:'Relation avec un collègue'},
+  {id:'horsplanning', label:'Demande hors planning'},
+  {id:'autre', label:'Autre'}
+];
+const dysfType = id => DYSF_TYPES.find(t => t.id===id) || DYSF_TYPES[DYSF_TYPES.length-1];
+const allInc = () => [...(S.incidents||new Map()).values()];
+// Tous les dysfonctionnements : remarques cochées sur une tâche + signalements sans tâche
+function allDysf(){
+  const a = allEntries().filter(e => e.dysf).map(e => ({id:e.id, date:e.date, time:e.start, type:e.dysfType||'autre', text:e.remark||'', entry:e}));
+  const b = allInc().map(i => ({id:i.id, date:i.date, time:i.time||'', type:i.type||'autre', text:i.text||'', inc:i}));
+  return a.concat(b).sort((x,y) => (y.date+y.time).localeCompare(x.date+x.time));
+}
+const dysfOn = d => allDysf().filter(x => x.date===d);
 const absReal = d => absOn(d).filter(a => a.type!=='dispo');          // vraies absences (congés…)
 const dispoOf = d => absOn(d).find(a => a.type==='dispo') || null;     // « disponible, rien demandé »
 const isDispo = d => !!dispoOf(d) && !entriesOn(d).length;
@@ -681,7 +734,7 @@ function setSync(kind){
 function loadLocal(){
   try{
     const raw = localStorage.getItem(LS);
-    if(raw){ const o = JSON.parse(raw); S.settings = {...clone(DEFAULT_SETTINGS), ...(o.settings||{})}; (o.entries||[]).forEach(e => S.entries.set(e.id,e)); (o.absences||[]).forEach(a => S.absences.set(a.id,a)); }
+    if(raw){ const o = JSON.parse(raw); S.settings = {...clone(DEFAULT_SETTINGS), ...(o.settings||{})}; (o.entries||[]).forEach(e => S.entries.set(e.id,e)); (o.absences||[]).forEach(a => S.absences.set(a.id,a)); (o.incidents||[]).forEach(a => S.incidents.set(a.id,a)); }
     S.mode = 'local'; setSync('local');
     if(!Array.isArray(S.settings.shows)) S.settings.shows = clone(DEFAULT_SETTINGS.shows);
     let changed = migrateSettings(S.settings);
@@ -692,12 +745,22 @@ function loadLocal(){
 }
 function saveLocal(){
   if(S.mode!=='local') return;
-  try{ localStorage.setItem(LS, JSON.stringify({settings:S.settings, entries:allEntries(), absences:allAbs()})); }
+  try{ localStorage.setItem(LS, JSON.stringify({settings:S.settings, entries:allEntries(), absences:allAbs(), incidents:allInc()})); }
   catch(e){ toast('Stockage local plein ou indisponible.'); }
 }
 function putEntry(e){
   S.entries.set(e.id, e); render(); refreshLists();
   if(S.mode==='db'){ const {id, ...body} = e; return enqueue(id, () => S.col.doc(id).set(body)); }
+  saveLocal(); return Promise.resolve();
+}
+function putInc(a){
+  S.incidents.set(a.id, a); render();
+  if(S.mode==='db'){ const {id, ...body} = a; return enqueue(id, () => S.col.doc(id).set({...body, kind:'incident'})); }
+  saveLocal(); return Promise.resolve();
+}
+function removeInc(id){
+  S.incidents.delete(id); render();
+  if(S.mode==='db') return enqueue(id, () => S.col.doc(id).delete());
   saveLocal(); return Promise.resolve();
 }
 function putAbs(a){
@@ -736,9 +799,9 @@ async function boot(){
       S.col.onSnapshot(snap => {
         if(!snap.metadata.fromCache){ clearTimeout(slow); setSync('db'); }
         const m = new Map(); let st = null;
-        const ab = new Map();
-        snap.docs.forEach(d => { const v = d.data(); if(!v) return; if(d.id==='settings') st = v; else if(v.kind==='absence') ab.set(d.id, {...clone(v), id:d.id}); else if(v.date) m.set(d.id, {...clone(v), id:d.id}); });
-        S.entries = m; S.absences = ab;
+        const ab = new Map(), inc = new Map();
+        snap.docs.forEach(d => { const v = d.data(); if(!v) return; if(d.id==='settings') st = v; else if(v.kind==='absence') ab.set(d.id, {...clone(v), id:d.id}); else if(v.kind==='incident') inc.set(d.id, {...clone(v), id:d.id}); else if(v.date) m.set(d.id, {...clone(v), id:d.id}); });
+        S.entries = m; S.absences = ab; S.incidents = inc;
         S.settings = {...clone(DEFAULT_SETTINGS), ...(st?clone(st):{})};
         if(!Array.isArray(S.settings.shows)) S.settings.shows = clone(DEFAULT_SETTINGS.shows);
         if(st && migrateSettings(S.settings)) enqueue('settings', () => S.col.doc('settings').set(clone(S.settings)));
@@ -789,6 +852,7 @@ function entryCard(e, opts={}){
         <span class="chip ${st.cls}"><span class="dot"></span>${st.label}</span>
         ${+e.pause ? `<span class="chip proj">pause ${+e.pause} min</span>` : ''}
       </div>
+      ${e.dysf ? `<div class="e-meta"><span class="chip dysf"><span class="dot"></span>⚠ ${esc(dysfType(e.dysfType).label)}</span></div>` : ''}
       ${e.remark ? `<p class="remark">${hl(e.remark)}</p>` : ''}
     </div>
     <div class="e-dur num">${fmt(dur(e))}</div>
@@ -846,7 +910,8 @@ function viewJour(){
     </section>
     ${absL.map(a => `<button class="absrow" style="--c:${absType(a.type).color}" data-act="absEdit" data-id="${esc(a.id)}"><span style="font-size:1.4rem">🌴</span><span><b>${esc(absType(a.type).label)}</b><span class="small muted">${esc(absLabel(a))}${a.remark ? ' · '+esc(a.remark) : ''}</span></span><span class="go small muted" style="margin-left:auto">Modifier ›</span></button>`).join('')}
     ${timerHtml}
-    <button class="btn ghost block" data-act="absNew">Encoder un congé ou une absence</button>
+    ${allInc().filter(i => i.date===curDate).sort((a,b) => (a.time||'').localeCompare(b.time||'')).map(incRow).join('')}
+    <div class="grid2"><button class="btn ghost" data-act="absNew">Congé ou absence</button><button class="btn ghost warnline" data-act="incNew">⚠ Dysfonctionnement</button></div>
     ${favs.length ? `<div class="favs"><span class="small muted">Favoris : touche pour encoder</span><div class="chips">${favs.map(f => { const c = catOf(f.cat), sh = showOf(f.show); return `<button class="pick" style="--c:${esc((sh||c).color)}" data-act="favUse" data-id="${esc(f.id)}"><span class="dot"></span>${esc(c.name)}${sh ? ' · '+esc(sh.name) : ''}${f.task ? ' · '+esc(f.task) : ''}</button>`; }).join('')}</div></div>` : ''}
     ${list.length ? list.map(e => entryCard(e)).join('') : dispo ?
       `<div class="card empty"><b style="color:var(--ink)">Disponible, aucun travail demandé.</b><br><span class="small">Ce jour compte comme jour de travail sans tâche.</span><br><button class="btn primary" style="margin-top:12px" data-act="new">Encoder une tâche</button><br><button class="link" data-act="dispoOff" data-id="${esc(dispo.id)}">Retirer « disponible »</button></div>` :
@@ -962,6 +1027,7 @@ function searchResults(){
     if(Q.status && e.status !== Q.status) return false;
     if(Q.show && (e.show||'none') !== Q.show) return false;
     if(Q.remark && !e.remark) return false;
+    if(Q.dysf && !e.dysf) return false;
     if(Q.source && (sourceOf(e.source) ? e.source : 'none') !== Q.source) return false;
     if(Q.urgent && !isUrgent(e)) return false;
     if(words.length){ const hay = norm([e.task, e.project, e.remark, catOf(e.cat).name, showOf(e.show)?.name, e.requestedBy].join(' ')); if(!words.every(w => hay.includes(w))) return false; }
@@ -1000,12 +1066,13 @@ function viewRecherche(){
       </div>
       <label class="field">Origine<select id="q-source" data-q="source"><option value="">Toutes</option>${SOURCES.map(x => `<option value="${x.id}" ${Q.source===x.id?'selected':''}>${x.label}</option>`).join('')}<option value="none" ${Q.source==='none'?'selected':''}>Non précisée</option></select></label>
       <label class="check"><input type="checkbox" id="q-remark" data-q="remark" ${Q.remark?'checked':''}>Seulement les tâches avec une remarque</label>
+      <label class="check"><input type="checkbox" id="q-dysf" data-q="dysf" ${Q.dysf?'checked':''}>Seulement les tâches avec un dysfonctionnement</label>
       <label class="check"><input type="checkbox" id="q-urgent" data-q="urgent" ${Q.urgent?'checked':''}>Seulement les demandes urgentes (moins de ${fmt(S.settings.urgentMin)} de prévenance)</label>
     </section>
     <section class="card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <div style="flex:1"><b class="num" style="font-size:1.3rem">${fmt(charge)}</b> <span class="muted">de tâches sur ${res.length} résultat${res.length>1?'s':''}${charge>total ? `, dont ${fmt(charge-total)} en simultané` : ''}</span></div>
       ${res.length ? `<button class="btn" data-act="exportSearch">Exporter (CSV)</button>` : ''}
-      ${(Q.text||Q.from||Q.to||Q.cat||Q.show||Q.source||Q.status||Q.remark||Q.urgent) ? `<button class="btn ghost" data-act="resetSearch">Effacer les filtres</button>` : ''}
+      ${(Q.text||Q.from||Q.to||Q.cat||Q.show||Q.source||Q.status||Q.remark||Q.urgent||Q.dysf) ? `<button class="btn ghost" data-act="resetSearch">Effacer les filtres</button>` : ''}
     </section>
     ${res.length ? groups.map(g => `<div class="daygroup"><h3><span>${esc(dayLong(g.d))}</span><span class="num">${fmt(presence(g.l))}</span></h3>${g.l.sort(byStart).map(e => entryCard(e,{hl})).join('')}</div>`).join('')
       : `<div class="card empty">${S.entries.size ? 'Aucune tâche ne correspond. Élargissez la période ou retirez un filtre.' : 'Encodez votre première tâche pour pouvoir la retrouver ici.'}</div>`}
@@ -1043,7 +1110,7 @@ function calMonth(y, mo, td){
     const miss = work && past && !l.length && !absReal(d).length && !dispoOf(d) && workValue(d) > 0;
     const cls = ['d', !work && !l.length ? 'off' : '', isWeekHoliday(d) ? 'hol' : '', abs ? 'abs' : '', miss ? 'miss' : '', d===td ? 'today' : '', d > td ? 'fut' : '', pct >= 70 ? 'dark' : ''].filter(Boolean).join(' ');
     const bg = pct ? `color-mix(in srgb,#F59E0B ${pct}%,var(--surface2))` : 'var(--surface2)';
-    const mk = isDispo(d) ? '○' : '';
+    const mk = dysfOn(d).length ? '⚠' : isDispo(d) ? '○' : '';
     const tip = `${dayLong(d)} : ${m ? fmt(m) : 'aucune heure'}${isWeekHoliday(d) ? ' · férié' : ''}${abs ? ' · '+absType(absReal(d)[0].type).label : ''}${isDispo(d) ? ' · disponible' : ''}${miss ? ' · non encodé' : ''}`;
     h += `<button class="${cls}" style="--lv:${bg}" data-act="gotoDay" data-date="${d}" title="${esc(tip)}" aria-label="${esc(tip)}">${+d.slice(8)}${m ? `<small>${fmtC(m)}</small>` : ''}${mk ? `<span class="mk">${mk}</span>` : ''}</button>`;
   }
@@ -1059,7 +1126,7 @@ function calSection(from, to){
   const lv = CAL_LV.map(([t,p],i) => `<span><i style="background:${+p ? `color-mix(in srgb,#F59E0B ${p}%,var(--surface2))` : 'var(--surface2)'}"></i>${i===0 ? 'moins de 2h' : i===CAL_LV.length-1 ? '8h et +' : `${t/60}h–${CAL_LV[i+1][0]/60}h`}</span>`).join('');
   return `<section class="card"><h2>Calendrier de charge</h2>
     ${(shown.length ? shown : months).slice().reverse().map(([yy,mm]) => calMonth(yy, mm, td)).join('')}
-    <div class="callegend">${lv}<span><i style="box-shadow:inset 0 0 0 1.5px var(--warn)"></i>férié</span><span><i style="background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ok) 28%,var(--surface2)) 0 3px,var(--surface2) 3px 6px)"></i>congé</span><span><i style="box-shadow:inset 0 0 0 1.5px var(--bad)"></i>non encodé</span><span>○ disponible</span></div>
+    <div class="callegend">${lv}<span><i style="box-shadow:inset 0 0 0 1.5px var(--warn)"></i>férié</span><span><i style="background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--ok) 28%,var(--surface2)) 0 3px,var(--surface2) 3px 6px)"></i>congé</span><span><i style="box-shadow:inset 0 0 0 1.5px var(--bad)"></i>non encodé</span><span>○ disponible</span><span>⚠ dysfonctionnement</span></div>
     <p class="note">Une case vide sans couleur en semaine : aucune heure. Touche un jour pour l’ouvrir.</p></section>`;
 }
 function viewBilan(){
@@ -1087,6 +1154,24 @@ function viewBilan(){
       <tr class="vals"><td class="r"><span class="lbl">Total</span><b>${fmtC(v.m)}</b></td><td class="r"><span class="lbl">Par semaine</span>${weeks>=1 ? fmtC(v.m/weeks) : '–'}</td>${yearly ? `<td class="r"><span class="lbl">Par mois</span>${elapsedDays>=28 ? fmtC(v.m/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r"><span class="lbl">Part</span>${charge ? Math.round(v.m/charge*100) : 0} %</td></tr>`;
   }).join('');
   const abs = ABS_TYPES.filter(t => c.absBy[t.id]);
+  const dys = allDysf().filter(x => x.date>=from && x.date<=to);
+  const dysPrev = started ? allDysf().filter(x => x.date>=pFrom && x.date<=pEnd).length : 0;
+  const dysByType = {}; dys.forEach(x => dysByType[x.type] = (dysByType[x.type]||0) + 1);
+  const dysMonths = {}; dys.forEach(x => { const k = x.date.slice(0,7); dysMonths[k] = (dysMonths[k]||0) + 1; });
+  const dysSection = `<section class="card">
+      <h2>Dysfonctionnements</h2>
+      <div class="kpis">
+        <div class="kpi"><b class="num" style="color:${dys.length ? 'var(--bad)' : 'inherit'}">${dys.length}</b><span>sur la période</span></div>
+        <div class="kpi"><b class="num">${started ? dysPrev : '–'}</b><span>même portion avant</span></div>
+        <div class="kpi"><b class="num">${new Set(dys.map(x => x.date)).size}</b><span>jour${new Set(dys.map(x => x.date)).size>1?'s':''} touché${new Set(dys.map(x => x.date)).size>1?'s':''}</span></div>
+      </div>
+      ${dys.length ? `<div style="margin-top:12px">${Object.entries(dysByType).sort((a,b) => b[1]-a[1]).map(([k,n]) => `<div class="dtype"><span>${esc(dysfType(k).label)}</span><b class="num">${n}</b><div class="bar"><span style="width:${(n/dys.length*100).toFixed(1)}%"></span></div></div>`).join('')}</div>
+        ${Object.keys(dysMonths).length > 1 ? `<div class="tblwrap" style="margin-top:12px"><table class="tbl"><tbody>${Object.entries(dysMonths).sort((a,b) => b[0].localeCompare(a[0])).map(([k,n]) => `<tr><td>${esc(new Date(+k.slice(0,4), +k.slice(5,7)-1, 1).toLocaleDateString('fr',{month:'long',year:'numeric'}))}</td><td class="r"><b>${n}</b></td></tr>`).join('')}</tbody></table></div>` : ''}
+        <div class="dlist">${dys.map(x => `<button class="incrow" data-act="dysfOpen" data-id="${esc(x.id)}"><span>⚠</span><span style="flex:1;min-width:0"><span class="when">${esc(shortDay(x.date))}${x.time ? ' · '+esc(x.time) : ''}${x.entry ? ' · '+esc(catOf(x.entry.cat).name)+(showOf(x.entry.show) ? ' · '+esc(showOf(x.entry.show).name) : '') : ''}</span><b>${esc(dysfType(x.type).label)}</b>${x.text ? `<span class="t">${esc(x.text)}</span>` : ''}</span></button>`).join('')}</div>
+        <div class="actions"><button class="btn" data-act="exportDysf">Exporter (CSV)</button></div>`
+      : '<p class="small muted" style="margin:8px 0 0">Aucun dysfonctionnement noté sur cette période.</p>'}
+      <p class="note">Remarques cochées « Dysfonctionnement » dans une tâche, et signalements faits depuis la vue Journée sans tâche.</p>
+    </section>`;
   const kinds = [['semaine','Semaine'],['mois','Mois'],['trimestre','Trimestre'],['annee','Année']];
   return `<div class="stack">
     <div class="seg">${kinds.map(([k,l]) => `<button class="pick" data-act="bilKind" data-k="${k}" aria-pressed="${bil.kind===k}">${l}</button>`).join('')}</div>
@@ -1105,6 +1190,8 @@ function viewBilan(){
         <tr class="vals tot"><td class="r"><span class="lbl">Total</span>${fmtC(charge)}</td><td class="r"><span class="lbl">Par semaine</span>${weeks>=1 ? fmtC(charge/weeks) : '–'}</td>${yearly ? `<td class="r"><span class="lbl">Par mois</span>${elapsedDays>=28 ? fmtC(charge/(elapsedDays/30.44)) : '–'}</td>` : ''}<td class="r"><span class="lbl">Part</span>100 %</td></tr></tbody></table></div>
       <p class="note">Moyennes calculées sur la partie écoulée de la période${weeks<1 ? ', trop courte ici pour une moyenne par semaine' : ''}. Les tâches simultanées comptent chacune pour leur émission. ▲▼ : écart avec la même portion de la période précédente. Touche une émission pour voir sa fiche.</p>` : '<p class="muted small">Aucune tâche sur cette période.</p>'}
     </section>
+
+    ${dysSection}
 
     <section class="card">
       <h2>Jours de travail et heures</h2>
@@ -1215,6 +1302,8 @@ function buildSummary(){
   if(shows.length) L.push(`• Par émission : ${shows.join(', ')}`);
   if(hors.length) L.push(`• ${hors.length} demande${hors.length>1?'s':''} hors planning (${fmt(sumMin(hors))}, ${charge ? Math.round(sumMin(hors)/charge*100) : 0} % du temps de tâches)${urg.length ? `, dont ${urg.length} urgente${urg.length>1?'s':''}` : ''}`);
   const sim = simultMin(list); if(sim) L.push(`• ${fmt(sim)} de tâches menées en simultané`);
+  const dz = allDysf().filter(x => x.date>=from && x.date<=end);
+  if(dz.length){ const bt = {}; dz.forEach(x => bt[x.type] = (bt[x.type]||0)+1); L.push(`• ${dz.length} dysfonctionnement${dz.length>1?'s':''} noté${dz.length>1?'s':''} : ${Object.entries(bt).sort((a,b) => b[1]-a[1]).map(([k,n]) => dysfType(k).label.toLowerCase()+' ('+n+')').join(', ')}`); }
   if(absDaysTot) L.push(`• ${dnum(absDaysTot)} jour${absDaysTot>1?'s':''} de congé ou d’absence`);
   return L.join('\n');
 }
@@ -1236,10 +1325,16 @@ function backupBanner(){
   return `<section class="card backup"><p><b>${n==null ? 'Aucune sauvegarde encore faite.' : `Dernière sauvegarde : ${esc(last)}, il y a ${n} jour${n>1?'s':''}.`}</b> ${where}</p><button class="btn primary" data-act="backup">Sauvegarder maintenant</button></section>`;
 }
 async function doBackup(){
-  const ok = await saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries(), absences:allAbs()}, null, 1), 'application/json');
+  const ok = await saveFile('sauvegarde-journal-'+todayISO()+'.json', JSON.stringify({version:1, exportedAt:new Date().toISOString(), settings:S.settings, entries:allEntries(), absences:allAbs(), incidents:allInc()}, null, 1), 'application/json');
   if(ok){ S.settings.lastBackup = new Date().toISOString(); putSettings(); }
 }
 
+function dysfCSV(f, t){
+  const q = v => { const x = String(v??''); return /[";\n\r]/.test(x) ? '"'+x.replace(/"/g,'""')+'"' : x; };
+  const head = ['Date','Jour','Heure','Type','Tâche liée','Émission','Description'];
+  const rows = allDysf().filter(x => x.date>=f && x.date<=t).reverse().map(x => [x.date, parseISO(x.date).toLocaleDateString('fr',{weekday:'long'}), x.time, dysfType(x.type).label, x.entry ? catOf(x.entry.cat).name+' '+x.entry.start+'–'+x.entry.end : '', x.entry ? (showOf(x.entry.show)?.name || '') : '', x.text].map(q).join(';'));
+  return '\ufeff' + head.join(';') + '\r\n' + rows.join('\r\n');
+}
 function viewReglages(){
   const st = S.settings, wd = ['L','M','M','J','V','S','D'];
   const storage = S.mode==='db' ? 'Vos données sont liées à votre compte Claude et privées : vous les retrouvez sur tous vos appareils.'
@@ -1349,7 +1444,14 @@ function openForm(entry, opts={}){
   setTimeout(() => (entry ? $('#f-remark') : $('#f-task')).focus({preventScroll:true}), 60);
 }
 function closeForm(){ const sh = $('#sheet'); sh.classList.remove('open'); sh.setAttribute('aria-hidden','true'); editing = null; }
+function drawDysf(){
+  const on = !!editing.dysf; $('#f-dysf').checked = on; $('#f-dysfbox').classList.toggle('on', on);
+  $('#f-dysftypes').style.display = on ? '' : 'none';
+  $('#f-dysftypes').innerHTML = DYSF_TYPES.map(t => `<button type="button" class="pick" style="--c:var(--bad)" data-act="fDysfType" data-id="${t.id}" aria-pressed="${(editing.dysfType||'')===t.id}">${t.label}</button>`).join('');
+  $('#f-remark').placeholder = on ? 'Décris les faits : quoi, quand, qui a demandé, ce qui a été bloqué…' : 'Ce qui a bloqué, ce qu’il reste à faire, une info à retenir…';
+}
 function drawFormChips(){
+  drawDysf();
   $('#f-cats').innerHTML = S.settings.cats.map(c => `<button type="button" class="pick" style="--c:${esc(c.color)}" data-act="fCat" data-id="${esc(c.id)}" aria-pressed="${editing.cat===c.id}"><span class="dot"></span>${esc(c.name)}</button>`).join('');
   $('#f-shows').innerHTML = [{id:'', name:'Aucune', color:'var(--muted)'}, ...(S.settings.shows||[])].map(c => `<button type="button" class="pick" style="--c:${esc(c.color)}" data-act="fShow" data-id="${esc(c.id)}" aria-pressed="${(editing.show||'')===c.id}"><span class="dot"></span>${esc(c.name)}</button>`).join('');
   $('#f-source').innerHTML = SOURCES.map(x => `<button type="button" class="pick" style="--c:${x.id==='direct'?'var(--warn)':'var(--accent)'}" data-act="fSource" data-id="${x.id}" aria-pressed="${editing.source===x.id}">${x.label}</button>`).join('');
@@ -1359,7 +1461,7 @@ function drawFormChips(){
 }
 function readForm(){
   editing.date = $('#f-date').value; editing.start = $('#f-start').value; editing.end = $('#f-end').value;
-  editing.task = $('#f-task').value.trim(); editing.remark = $('#f-remark').value.trim();
+  editing.task = $('#f-task').value.trim(); editing.remark = $('#f-remark').value.trim(); editing.dysf = $('#f-dysf').checked;
   editing.requestedBy = editing.source==='direct' ? $('#f-by').value.trim() : ''; editing.askedAt = $('#f-asked').value;
 }
 function updateFormDur(){
@@ -1406,8 +1508,8 @@ function refreshLists(){
 function toCSV(list){
   simCache = new Map();
   const q = v => { const s = String(v??''); return /[";\n\r]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
-  const head = ['Date','Jour','Début','Fin','Pause (min)','Durée (h décimales)','Durée (h:mm)','Métier','Émission','Détail','Origine','Demandé par','Demande reçue','Prévenance (h)','Simultanée','Statut','Remarque'];
-  const rows = list.slice().sort(byStart).map(e => { const m = dur(e); return [e.date, parseISO(e.date).toLocaleDateString('fr',{weekday:'long'}), e.start, e.end, +e.pause||0, (m/60).toFixed(2).replace('.',','), Math.floor(m/60)+':'+pad(m%60), catOf(e.cat).name, showOf(e.show)?.name || e.project || '', e.task, sourceOf(e.source)?.label || 'Non précisée', e.requestedBy || '', e.askedAt ? e.askedAt.replace('T',' ') : '', leadMin(e)==null ? '' : (leadMin(e)/60).toFixed(1).replace('.',','), simWith(e).length ? 'oui' : 'non', statusOf(e.status).label, e.remark].map(q).join(';'); });
+  const head = ['Date','Jour','Début','Fin','Pause (min)','Durée (h décimales)','Durée (h:mm)','Métier','Émission','Détail','Origine','Demandé par','Demande reçue','Prévenance (h)','Simultanée','Statut','Dysfonctionnement','Remarque'];
+  const rows = list.slice().sort(byStart).map(e => { const m = dur(e); return [e.date, parseISO(e.date).toLocaleDateString('fr',{weekday:'long'}), e.start, e.end, +e.pause||0, (m/60).toFixed(2).replace('.',','), Math.floor(m/60)+':'+pad(m%60), catOf(e.cat).name, showOf(e.show)?.name || e.project || '', e.task, sourceOf(e.source)?.label || 'Non précisée', e.requestedBy || '', e.askedAt ? e.askedAt.replace('T',' ') : '', leadMin(e)==null ? '' : (leadMin(e)/60).toFixed(1).replace('.',','), simWith(e).length ? 'oui' : 'non', statusOf(e.status).label, e.dysf ? dysfType(e.dysfType).label : '', e.remark].map(q).join(';'); });
   return '\ufeff' + head.join(';') + '\r\n' + rows.join('\r\n');
 }
 async function saveFile(filename, text, mime){
@@ -1659,10 +1761,38 @@ function drawAbs(){
   else if(absEd.id) info.textContent = (isWorkday(r.all[0]) && !isHoliday(r.all[0])) ? '' : 'Ce jour est un week-end ou un férié : l’absence ne sera pas comptée.';
   else info.textContent = r.planned.length ? `${r.planned.length} jour${r.planned.length>1?'s':''} de travail ${r.planned.length>1?'seront encodés':'sera encodé'}. Week-ends, fériés et jours non travaillés sont exclus.` : 'Aucun jour de travail prévu dans cette période (week-end, férié ou jour non travaillé).';
 }
+let incEd = null;
+function incRow(i){ return `<button class="incrow" data-act="incEdit" data-id="${esc(i.id)}"><span>⚠</span><span style="flex:1;min-width:0"><b>${esc(dysfType(i.type).label)}${i.time ? ' · '+esc(i.time) : ''}</b>${i.text ? `<span class="t">${esc(i.text)}</span>` : ''}</span></button>`; }
+function openInc(i){
+  incEd = i ? clone(i) : {id:null, date:curDate, time: curDate===todayISO() ? nowHM() : '', type:'', text:''};
+  $('#in-title').textContent = i ? 'Modifier le dysfonctionnement' : 'Signaler un dysfonctionnement';
+  $('#in-date').value = incEd.date; $('#in-time').value = incEd.time || ''; $('#in-text').value = incEd.text || ''; $('#in-err').textContent = '';
+  $('#in-extra').style.display = i ? '' : 'none'; drawInc();
+  const m = $('#incdlg'); m.classList.add('open'); m.setAttribute('aria-hidden','false');
+}
+function drawInc(){ $('#in-types').innerHTML = DYSF_TYPES.map(t => `<button type="button" class="pick" style="--c:var(--bad)" data-act="incType" data-id="${t.id}" aria-pressed="${incEd.type===t.id}">${t.label}</button>`).join(''); }
+function closeInc(){ const m = $('#incdlg'); m.classList.remove('open'); m.setAttribute('aria-hidden','true'); incEd = null; }
 function closeAbs(){ const m = $('#absdlg'); m.classList.remove('open'); m.setAttribute('aria-hidden','true'); absEd = null; }
 
 const ACT = {
   absNew: () => openAbs(null),
+  incNew: () => openInc(null),
+  incEdit: b => { const i = S.incidents.get(b.dataset.id); if(i) openInc(i); },
+  incClose: () => closeInc(),
+  incType: b => { incEd.type = incEd.type===b.dataset.id ? '' : b.dataset.id; drawInc(); },
+  incSave: () => {
+    if(!incEd) return;
+    const date = $('#in-date').value, text = $('#in-text').value.trim();
+    if(!date){ $('#in-err').textContent = 'Indique la date.'; return; }
+    if(!text && !incEd.type){ $('#in-err').textContent = 'Choisis un type ou décris ce qui s’est passé.'; return; }
+    const isNew = !incEd.id;
+    const i = {id: incEd.id || 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), kind:'incident', date, time:$('#in-time').value || '', type:incEd.type || 'autre', text, createdAt: incEd.createdAt || new Date().toISOString()};
+    closeInc(); putInc(i); toast(isNew ? 'Dysfonctionnement enregistré' : 'Modifié');
+  },
+  incDelete: () => { if(!incEd || !incEd.id) return; const id = incEd.id, old = S.incidents.get(id); closeInc(); removeInc(id); toastUndo('Dysfonctionnement supprimé', () => { if(old) putInc(clone(old)); }); },
+  fDysfType: b => { readForm(); editing.dysfType = editing.dysfType===b.dataset.id ? '' : b.dataset.id; drawDysf(); },
+  dysfOpen: b => { const x = allDysf().find(y => y.id===b.dataset.id); if(!x) return; if(x.inc){ curDate = x.date; openInc(x.inc); } else openForm(x.entry); },
+  exportDysf: () => { const [f,t] = bilRange(); saveFile('dysfonctionnements-'+f+'-'+t+'.csv', dysfCSV(f,t), 'text/csv'); },
   absEdit: b => { const a = S.absences.get(b.dataset.id); if(a) openAbs(a); },
   absClose: () => closeAbs(),
   absType: b => { absEd.type = b.dataset.id; drawAbs(); },
@@ -1751,7 +1881,7 @@ const ACT = {
   staleDrop: async () => { if(!(await askConfirm('Abandonner le chrono sans rien encoder ?', 'Abandonner'))) return; closeStale(); S.settings.timer = null; putSettings(); },
   cancelTimer: async () => { if(!(await askConfirm('Abandonner le chrono sans rien encoder ?', 'Abandonner'))) return; S.settings.timer = null; putSettings(); },
   range: b => { setRange(b.dataset.r); render(); },
-  resetSearch: () => { Object.assign(Q, {text:'', from:'', to:'', cat:'', show:'', source:'', status:'', remark:false, urgent:false, range:'all'}); render(); },
+  resetSearch: () => { Object.assign(Q, {text:'', from:'', to:'', cat:'', show:'', source:'', status:'', remark:false, urgent:false, dysf:false, range:'all'}); render(); },
   exportSearch: () => saveFile('recherche-'+todayISO()+'.csv', toCSV(searchResults()), 'text/csv'),
   exportWeek: () => exportRange(weekStart, addDays(weekStart,6), 'semaine-'+weekStart+'.csv'),
   exportMonth: b => exportRange(b.dataset.from, b.dataset.to, 'mois-'+b.dataset.from.slice(0,7)+'.csv'),
@@ -1799,6 +1929,7 @@ document.addEventListener('keydown', e => {
   if(e.key==='Escape' && $('#confirm').classList.contains('open')){ endConfirm(false); return; }
   if(e.key==='Escape' && $('#absdlg').classList.contains('open')){ closeAbs(); return; }
   if(e.key==='Escape' && $('#sumdlg').classList.contains('open')){ closeSummary(); return; }
+  if(e.key==='Escape' && $('#incdlg').classList.contains('open')){ closeInc(); return; }
   if(e.key==='Escape' && $('#itemdlg').classList.contains('open')){ closeItem(); return; }
   if(e.key==='Enter' && e.target.id==='it-name'){ e.preventDefault(); ACT.itemSave(); return; }
   if(e.key==='Escape' && $('#sheet').classList.contains('open')){ closeForm(); return; }
@@ -1809,6 +1940,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if(t.dataset.q){ Q[t.dataset.q] = t.type==='checkbox' ? t.checked : t.value; if(t.dataset.q==='from'||t.dataset.q==='to') Q.range = 'custom'; render(); return; }
   if(t.closest('#sheet') && ['f-date','f-start','f-end','f-asked'].includes(t.id)) updateFormDur();
+  if(t.id==='f-dysf' && editing){ readForm(); if(editing.dysf && !editing.dysfType && editing.source==='direct') editing.dysfType = 'horsplanning'; drawDysf(); if(editing.dysf) $('#f-remark').focus(); }
   if(absEd && (t.id==='ab-from' || t.id==='ab-to')) drawAbs();
 });
 document.addEventListener('change', e => {
@@ -1847,7 +1979,9 @@ $('#importfile').addEventListener('change', async e => {
       if(Array.isArray(o.settings.favs)) S.settings.favs = o.settings.favs.filter(f => f && f.id && f.cat).slice(0,10);
       await putSettings();
     }
-    for(const x of ok){ await putEntry({id: String(x.id || uid()), date:x.date, start:x.start, end:x.end, pause:+x.pause||0, cat:String(x.cat||''), show:String(x.show||''), project:String(x.project||''), source:String(x.source||''), requestedBy:String(x.requestedBy||''), askedAt:String(x.askedAt||''), task:String(x.task||''), abroad:!!x.abroad, exceptional:!!x.exceptional, status:STATUSES.some(s => s.id===x.status) ? x.status : 'fait', remark:String(x.remark||''), createdAt:x.createdAt||new Date().toISOString(), updatedAt:x.updatedAt||new Date().toISOString()}); }
+    for(const x of ok){ await putEntry({id: String(x.id || uid()), date:x.date, start:x.start, end:x.end, pause:+x.pause||0, cat:String(x.cat||''), show:String(x.show||''), project:String(x.project||''), source:String(x.source||''), requestedBy:String(x.requestedBy||''), askedAt:String(x.askedAt||''), task:String(x.task||''), abroad:!!x.abroad, exceptional:!!x.exceptional, status:STATUSES.some(s => s.id===x.status) ? x.status : 'fait', remark:String(x.remark||''), dysf:!!x.dysf, dysfType:String(x.dysfType||''), createdAt:x.createdAt||new Date().toISOString(), updatedAt:x.updatedAt||new Date().toISOString()}); }
+    const okI = Array.isArray(o.incidents) ? o.incidents.filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.date||'')) : [];
+    for(const a of okI){ await putInc({id:String(a.id), kind:'incident', date:a.date, time:String(a.time||''), type:DYSF_TYPES.some(t => t.id===a.type) ? a.type : 'autre', text:String(a.text||''), createdAt:a.createdAt||new Date().toISOString()}); }
     const okA = Array.isArray(o.absences) ? o.absences.filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.date||'')) : [];
     for(const a of okA){ await putAbs({id:String(a.id), kind:'absence', date:a.date, type:(a.type==='dispo' || ABS_TYPES.some(x => x.id===a.type)) ? a.type : 'autre', span:a.span==='demi' ? 'demi' : 'jour', minutes:+a.minutes||0, remark:String(a.remark||''), createdAt:a.createdAt||new Date().toISOString()}); }
     toast(ok.length+' tâche(s)'+(okA.length ? ' et '+okA.length+' absence(s)' : '')+' restaurée(s)');
