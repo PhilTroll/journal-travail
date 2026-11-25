@@ -277,6 +277,7 @@ input[type=time]::-webkit-date-and-time-value,input[type=date]::-webkit-date-and
 .dtype{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;padding:5px 0}
 .dtype .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--surface2);overflow:hidden}
 .dtype .bar span{display:block;height:100%;background:var(--bad)}
+.duo .btn{min-width:0;padding:10px 8px;font-size:.88rem;line-height:1.25;hyphens:manual;overflow-wrap:normal}
 .btn.warnline{border-color:color-mix(in srgb,var(--bad) 45%,var(--line));color:var(--bad)}
 .imp-sum{background:var(--surface2);border-radius:12px;padding:12px;font-size:.92rem}
 .imp-sum b{font-size:1.05rem}
@@ -911,7 +912,7 @@ function viewJour(){
     ${absL.map(a => `<button class="absrow" style="--c:${absType(a.type).color}" data-act="absEdit" data-id="${esc(a.id)}"><span style="font-size:1.4rem">🌴</span><span><b>${esc(absType(a.type).label)}</b><span class="small muted">${esc(absLabel(a))}${a.remark ? ' · '+esc(a.remark) : ''}</span></span><span class="go small muted" style="margin-left:auto">Modifier ›</span></button>`).join('')}
     ${timerHtml}
     ${allInc().filter(i => i.date===curDate).sort((a,b) => (a.time||'').localeCompare(b.time||'')).map(incRow).join('')}
-    <div class="grid2"><button class="btn ghost" data-act="absNew">Congé ou absence</button><button class="btn ghost warnline" data-act="incNew">⚠ Dysfonctionnement</button></div>
+    <div class="grid2 duo"><button class="btn ghost" data-act="absNew">Congé ou absence</button><button class="btn ghost warnline" data-act="incNew">⚠ Dysfonc&shy;tionnement</button></div>
     ${favs.length ? `<div class="favs"><span class="small muted">Favoris : touche pour encoder</span><div class="chips">${favs.map(f => { const c = catOf(f.cat), sh = showOf(f.show); return `<button class="pick" style="--c:${esc((sh||c).color)}" data-act="favUse" data-id="${esc(f.id)}"><span class="dot"></span>${esc(c.name)}${sh ? ' · '+esc(sh.name) : ''}${f.task ? ' · '+esc(f.task) : ''}</button>`; }).join('')}</div></div>` : ''}
     ${list.length ? list.map(e => entryCard(e)).join('') : dispo ?
       `<div class="card empty"><b style="color:var(--ink)">Disponible, aucun travail demandé.</b><br><span class="small">Ce jour compte comme jour de travail sans tâche.</span><br><button class="btn primary" style="margin-top:12px" data-act="new">Encoder une tâche</button><br><button class="link" data-act="dispoOff" data-id="${esc(dispo.id)}">Retirer « disponible »</button></div>` :
